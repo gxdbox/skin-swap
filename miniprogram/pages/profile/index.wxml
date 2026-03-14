@@ -68,7 +68,4 @@
       </view>
     </view>
   </scroll-view>
-
-  <!-- 底部导航 -->
-  <tab-bar current="2" />
 </view>

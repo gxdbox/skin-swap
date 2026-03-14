@@ -59,7 +59,4 @@
       <text class="no-more-text">没有更多了</text>
     </view>
   </scroll-view>
-
-  <!-- 底部导航 -->
-  <tab-bar current="1" />
 </view>

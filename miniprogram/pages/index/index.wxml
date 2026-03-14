@@ -8,7 +8,7 @@
   </view>
 
   <!-- 主内容 -->
-  <scroll-view scroll-y class="content-scroll">
+  <view class="content-container">
     <!-- 主体上传区 -->
     <view class="section">
       <text class="section-title">主体图片（沙发）</text>
@@ -81,8 +81,5 @@
         {{isProcessing ? '合成中...' : '开始合成'}}
       </button>
     </view>
-  </scroll-view>
-
-  <!-- 底部导航 -->
-  <tab-bar current="0" />
+  </view>
 </view>
