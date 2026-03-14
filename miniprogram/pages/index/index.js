@@ -7,16 +7,8 @@ Page({
     // 沙发图片
     sofaImage: '',
     sofaFileId: '',
-    // 布料列表 (使用在线示例图片)
-    fabrics: [
-      { id: 1, name: '米色花纹', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop', selected: false },
-      { id: 2, name: '蓝色条纹', image: 'https://images.unsplash.com/photo-1558171813-4c088753af8f?w=200&h=200&fit=crop', selected: false },
-      { id: 3, name: '灰色纯色', image: 'https://images.unsplash.com/photo-1567016432779-094069958ea5?w=200&h=200&fit=crop', selected: false },
-      { id: 4, name: '绿色格子', image: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=200&h=200&fit=crop', selected: false }
-    ],
-    // 自定义布料
-    customFabric: '',
-    customFabricFileId: '',
+    // 布料列表（支持多张，最多5张）
+    customFabrics: [],
     // 是否正在处理
     isProcessing: false,
     // 当前任务ID
@@ -84,24 +76,16 @@ Page({
     });
   },
 
-  // 选择预设布料
-  onSelectFabric(e) {
-    const { id } = e.currentTarget.dataset;
-    const fabrics = this.data.fabrics.map(f => ({
-      ...f,
-      selected: f.id === id
-    }));
-
-    // 清除自定义布料选择
-    this.setData({
-      fabrics,
-      customFabric: '',
-      customFabricFileId: ''
-    });
-  },
-
   // 上传自定义布料
   async onUploadFabric() {
+    const { customFabrics } = this.data;
+    
+    // 检查是否已达到上限
+    if (customFabrics.length >= 5) {
+      util.showToast('最多只能上传5张布料');
+      return;
+    }
+
     try {
       const tempFiles = await util.chooseImage(1);
       const tempPath = tempFiles[0];
@@ -115,13 +99,15 @@ Page({
       const cloudPath = util.generateCloudPath(app.globalData.openid || 'anonymous', 'fabric');
       const fileId = await util.uploadFile(compressedPath, cloudPath);
 
-      // 取消预设布料选择
-      const fabrics = this.data.fabrics.map(f => ({ ...f, selected: false }));
+      // 添加到布料列表
+      const newFabric = {
+        id: Date.now(),
+        image: compressedPath,
+        fileId: fileId
+      };
 
       this.setData({
-        customFabric: compressedPath,
-        customFabricFileId: fileId,
-        fabrics
+        customFabrics: [...customFabrics, newFabric]
       });
 
       util.hideLoading();
@@ -134,16 +120,15 @@ Page({
   },
 
   // 删除自定义布料
-  onDeleteCustomFabric() {
-    this.setData({
-      customFabric: '',
-      customFabricFileId: ''
-    });
+  onDeleteFabric(e) {
+    const { id } = e.currentTarget.dataset;
+    const customFabrics = this.data.customFabrics.filter(f => f.id !== id);
+    this.setData({ customFabrics });
   },
 
   // 开始合成
   async onStartFuse() {
-    const { sofaImage, sofaFileId, fabrics, customFabric, customFabricFileId } = this.data;
+    const { sofaImage, sofaFileId, customFabrics } = this.data;
 
     // 验证
     if (!sofaImage) {
@@ -151,9 +136,8 @@ Page({
       return;
     }
 
-    const selectedFabric = fabrics.find(f => f.selected);
-    if (!selectedFabric && !customFabric) {
-      util.showToast('请选择或上传布料');
+    if (customFabrics.length === 0) {
+      util.showToast('请上传至少一张布料');
       return;
     }
 
@@ -167,17 +151,10 @@ Page({
       this.setData({ isProcessing: true });
       util.showLoading('正在合成...');
 
-      // 获取布料图片URL
-      let fabricUrl = '';
-      let fabricFileId = '';
-
-      if (customFabric) {
-        fabricUrl = customFabric;
-        fabricFileId = customFabricFileId;
-      } else if (selectedFabric) {
-        fabricUrl = selectedFabric.image;
-        // 预设布料使用本地路径
-      }
+      // 使用第一张布料进行合成
+      const firstFabric = customFabrics[0];
+      const fabricUrl = firstFabric.image;
+      const fabricFileId = firstFabric.fileId;
 
       // 调用云函数
       const res = await wx.cloud.callFunction({
@@ -229,7 +206,7 @@ Page({
             result: {
               image: resultImageUrl,
               sofaImage: this.data.sofaImage,
-              fabricImage: this.data.customFabric || this.data.fabrics.find(f => f.selected)?.image,
+              fabricImage: this.data.customFabrics[0]?.image,
               taskId
             }
           });

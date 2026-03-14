@@ -63,7 +63,7 @@
 /* 布料网格 */
 .fabric-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 24rpx;
 }
 
@@ -74,74 +74,74 @@
 .fabric-item {
   position: relative;
   width: 100%;
-  padding-bottom: 100%;
-  border-radius: 16rpx;
+  aspect-ratio: 1;
+  border-radius: 24rpx;
   overflow: hidden;
-  border: 4rpx solid transparent;
+  background: #F5EDE4;
+  border: 2rpx solid #E8DDD0;
   transition: all 0.2s ease;
 }
 
-.fabric-item.selected {
-  border-color: #C4875A;
+.fabric-item.upload-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.fabric-item.upload-item:active {
+  opacity: 0.8;
 }
 
 .fabric-image {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.fabric-check {
-  position: absolute;
-  top: 8rpx;
-  right: 8rpx;
-  width: 36rpx;
-  height: 36rpx;
-  background: #C4875A;
+.upload-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+}
+
+.upload-icon {
+  width: 60rpx;
+  height: 60rpx;
+  border: 4rpx dashed #C4875A;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #FFFFFF;
-  font-size: 24rpx;
+  font-size: 40rpx;
+  color: #C4875A;
+  line-height: 1;
 }
 
-.fabric-name {
+.upload-text {
   font-size: 24rpx;
   color: #8B7355;
-  text-align: center;
-  margin-top: 8rpx;
-  display: block;
-}
-
-/* 自定义布料 */
-.custom-fabric {
-  margin-bottom: 24rpx;
-}
-
-.custom-fabric .fabric-item {
-  width: 160rpx;
-  padding-bottom: 160rpx;
-  margin: 0 auto;
 }
 
 .fabric-delete {
   position: absolute;
-  top: -8rpx;
-  right: -8rpx;
-  width: 40rpx;
-  height: 40rpx;
+  top: 12rpx;
+  right: 12rpx;
+  width: 44rpx;
+  height: 44rpx;
   background: rgba(0, 0, 0, 0.5);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #FFFFFF;
-  font-size: 28rpx;
+  font-size: 32rpx;
   z-index: 1;
+  line-height: 1;
 }
 
 /* 合成结果 */

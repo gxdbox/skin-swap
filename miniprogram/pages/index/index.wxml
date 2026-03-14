@@ -23,31 +23,31 @@
 
     <!-- 布料选择区 -->
     <view class="section">
-      <view class="section-header">
-        <text class="section-title">选择布料</text>
-        <text class="section-link" bindtap="onUploadFabric">+ 自定义</text>
-      </view>
-
-      <!-- 自定义布料预览 -->
-      <view wx:if="{{customFabric}}" class="custom-fabric">
-        <view class="fabric-item custom selected">
-          <image class="fabric-image" src="{{customFabric}}" mode="aspectFill" />
-          <view class="fabric-delete" bindtap="onDeleteCustomFabric">×</view>
-        </view>
-        <text class="fabric-name">自定义布料</text>
-      </view>
-
-      <!-- 预设布料网格 -->
-      <view class="fabric-grid {{customFabric ? 'hidden' : ''}}">
+      <text class="section-title">选择布料</text>
+      <text class="section-note">最多可上传5张布料</text>
+      
+      <!-- 布料网格 -->
+      <view class="fabric-grid">
+        <!-- 已上传的布料 -->
         <view
-          wx:for="{{fabrics}}"
+          wx:for="{{customFabrics}}"
           wx:key="id"
-          class="fabric-item {{item.selected ? 'selected' : ''}}"
-          data-id="{{item.id}}"
-          bindtap="onSelectFabric"
+          class="fabric-item"
         >
           <image class="fabric-image" src="{{item.image}}" mode="aspectFill" />
-          <view wx:if="{{item.selected}}" class="fabric-check">✓</view>
+          <view class="fabric-delete" data-id="{{item.id}}" bindtap="onDeleteFabric">×</view>
+        </view>
+        
+        <!-- 上传按钮（如果未达到5张） -->
+        <view
+          wx:if="{{customFabrics.length < 5}}"
+          class="fabric-item upload-item"
+          bindtap="onUploadFabric"
+        >
+          <view class="upload-placeholder">
+            <text class="upload-icon">+</text>
+            <text class="upload-text">上传布料</text>
+          </view>
         </view>
       </view>
     </view>
