@@ -1,0 +1,23 @@
+<view class="tab-bar">
+  <view class="tab-bar-inner">
+    <view
+      wx:for="{{tabs}}"
+      wx:key="key"
+      class="tab-item {{current === index ? 'active' : ''}}"
+      data-index="{{index}}"
+      data-path="{{item.path}}"
+      bindtap="onTabTap"
+    >
+      <view class="tab-icon">
+        <image
+          class="icon-img"
+          src="{{current === index ? item.icon + '-active' : item.icon}}"
+          mode="aspectFit"
+        />
+        <!-- 使用 text 模拟图标 -->
+        <text class="icon-text {{current === index ? 'active' : ''}}">{{item.icon === 'home' ? '🏠' : item.icon === 'history' ? '📋' : '👤'}}</text>
+      </view>
+      <text class="tab-label">{{item.name}}</text>
+    </view>
+  </view>
+</view>

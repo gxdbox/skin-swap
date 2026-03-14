@@ -1,0 +1,65 @@
+<view class="page">
+  <!-- 状态栏 -->
+  <view class="status-bar" style="height: {{statusBarHeight}}px;"></view>
+
+  <!-- 标题栏 -->
+  <view class="nav-bar">
+    <text class="nav-title">历史记录</text>
+    <text wx:if="{{historyList.length > 0}}" class="nav-action" bindtap="onClearHistory">清空</text>
+  </view>
+
+  <!-- 主内容 -->
+  <scroll-view scroll-y class="content-scroll" bindscrolltolower="onReachBottom">
+    <!-- 历史列表 -->
+    <view wx:if="{{historyList.length > 0}}" class="history-list">
+      <view
+        wx:for="{{historyList}}"
+        wx:key="_id"
+        class="history-item"
+        data-index="{{index}}"
+        bindtap="onViewDetail"
+      >
+        <!-- 结果图片 -->
+        <image class="item-image" src="{{item.resultImage}}" mode="aspectFill" />
+
+        <!-- 信息 -->
+        <view class="item-info">
+          <view class="item-row">
+            <text class="item-label">沙发</text>
+            <image class="item-thumb" src="{{item.sofaImage}}" mode="aspectFill" />
+          </view>
+          <view class="item-row">
+            <text class="item-label">布料</text>
+            <image class="item-thumb" src="{{item.fabricImage}}" mode="aspectFill" />
+          </view>
+          <text class="item-time">{{item.relativeTime}}</text>
+        </view>
+
+        <!-- 删除按钮 -->
+        <view class="item-delete" catchtap="onDeleteItem" data-id="{{item._id}}">
+          <text class="delete-icon">×</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view wx:elif="{{!isLoading}}" class="empty-state">
+      <text class="empty-icon">📋</text>
+      <text class="empty-text">暂无历史记录</text>
+      <text class="empty-hint">合成图片后将显示在这里</text>
+    </view>
+
+    <!-- 加载更多 -->
+    <view wx:if="{{isLoading}}" class="loading">
+      <text class="loading-text">加载中...</text>
+    </view>
+
+    <!-- 没有更多 -->
+    <view wx:elif="{{historyList.length > 0 && !hasMore}}" class="no-more">
+      <text class="no-more-text">没有更多了</text>
+    </view>
+  </scroll-view>
+
+  <!-- 底部导航 -->
+  <tab-bar current="1" />
+</view>

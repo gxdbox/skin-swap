@@ -1,0 +1,55 @@
+<view class="page">
+  <!-- 状态栏 -->
+  <view class="status-bar" style="height: {{statusBarHeight}}px;"></view>
+
+  <!-- 导航栏 -->
+  <view class="nav-bar">
+    <view class="nav-back" bindtap="onGoBack">
+      <text class="back-icon">←</text>
+    </view>
+    <text class="nav-title">合成详情</text>
+    <view class="nav-placeholder"></view>
+  </view>
+
+  <!-- 主内容 -->
+  <scroll-view scroll-y class="content-scroll" wx:if="{{result}}">
+    <!-- 预览卡片 -->
+    <view class="preview-card">
+      <image class="preview-image" src="{{result.image}}" mode="aspectFill" />
+      <text class="preview-label">沙发 + 布料 效果</text>
+    </view>
+
+    <!-- 信息区 -->
+    <view class="info-section">
+      <text class="info-title">合成信息</text>
+
+      <view class="info-row">
+        <text class="info-label">主体</text>
+        <text class="info-value">沙发图片</text>
+      </view>
+
+      <view class="info-row">
+        <text class="info-label">布料</text>
+        <text class="info-value">自定义布料</text>
+      </view>
+
+      <view class="info-row">
+        <text class="info-label">合成时间</text>
+        <text class="info-value">{{result.createdAt}}</text>
+      </view>
+    </view>
+
+    <!-- 操作区 -->
+    <view class="action-section">
+      <button class="btn-save" bindtap="onSaveToAlbum" loading="{{isSaving}}">
+        <text class="btn-icon">📥</text>
+        <text>保存到相册</text>
+      </button>
+
+      <button class="btn-share" open-type="share">
+        <text class="btn-icon">📤</text>
+        <text>分享给好友</text>
+      </button>
+    </view>
+  </scroll-view>
+</view>

@@ -1,0 +1,177 @@
+/**app.wxss - Global Styles**/
+
+/* Design Color System */
+:root {
+  --bg-primary: #FFFAF5;
+  --bg-card: #F5EDE4;
+  --color-primary: #C4875A;
+  --color-primary-light: #D4A882;
+  --text-primary: #5C4033;
+  --text-secondary: #8B7355;
+  --border-color: #E8DDD0;
+  --white: #FFFFFF;
+  --divider: #F0F0F0;
+}
+
+/* Page Styles */
+page {
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'PingFang SC', 'Helvetica Neue', sans-serif;
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Container */
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0 20rpx;
+}
+
+/* Button Reset */
+button {
+  background: initial;
+  padding: 0;
+  margin: 0;
+  line-height: normal;
+}
+
+button:focus {
+  outline: 0;
+}
+
+button::after {
+  border: none;
+}
+
+/* Primary Button */
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--white);
+  border-radius: 50rpx;
+  height: 100rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  font-weight: 500;
+}
+
+.btn-primary:active {
+  opacity: 0.8;
+}
+
+/* Secondary Button */
+.btn-secondary {
+  background: var(--bg-card);
+  color: var(--color-primary);
+  border-radius: 50rpx;
+  height: 100rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  font-weight: 500;
+  border: 1rpx solid var(--border-color);
+}
+
+.btn-secondary:active {
+  opacity: 0.8;
+}
+
+/* Card */
+.card {
+  background: var(--white);
+  border-radius: 32rpx;
+  padding: 32rpx;
+}
+
+/* Flex Utilities */
+.flex-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+/* Text Utilities */
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-accent {
+  color: var(--color-primary);
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+/* Safe Area */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Status Bar Placeholder */
+.status-bar {
+  height: 44px;
+  background: var(--bg-primary);
+}
+
+/* Navigation Bar */
+.nav-bar {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 40rpx;
+  background: var(--bg-primary);
+}
+
+.nav-bar-title {
+  font-size: 40rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Hide default navigation bar for custom implementation */
+::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+  color: transparent;
+}

@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "图片融合",
+  "usingComponents": {
+    "upload-box": "/components/upload-box/index",
+    "tab-bar": "/components/tab-bar/index"
+  }
+}

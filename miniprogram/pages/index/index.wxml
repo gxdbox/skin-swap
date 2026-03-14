@@ -1,0 +1,88 @@
+<view class="page">
+  <!-- 状态栏 -->
+  <view class="status-bar" style="height: {{statusBarHeight}}px;"></view>
+
+  <!-- 标题栏 -->
+  <view class="nav-bar">
+    <text class="nav-title">图片融合</text>
+  </view>
+
+  <!-- 主内容 -->
+  <scroll-view scroll-y class="content-scroll">
+    <!-- 主体上传区 -->
+    <view class="section">
+      <text class="section-title">主体图片（沙发）</text>
+      <upload-box
+        image="{{sofaImage}}"
+        hint="点击上传沙发图片"
+        bind:upload="onUploadSofa"
+        bind:delete="onDeleteSofa"
+      />
+      <text class="section-note">仅支持上传一张图片</text>
+    </view>
+
+    <!-- 布料选择区 -->
+    <view class="section">
+      <view class="section-header">
+        <text class="section-title">选择布料</text>
+        <text class="section-link" bindtap="onUploadFabric">+ 自定义</text>
+      </view>
+
+      <!-- 自定义布料预览 -->
+      <view wx:if="{{customFabric}}" class="custom-fabric">
+        <view class="fabric-item custom selected">
+          <image class="fabric-image" src="{{customFabric}}" mode="aspectFill" />
+          <view class="fabric-delete" bindtap="onDeleteCustomFabric">×</view>
+        </view>
+        <text class="fabric-name">自定义布料</text>
+      </view>
+
+      <!-- 预设布料网格 -->
+      <view class="fabric-grid {{customFabric ? 'hidden' : ''}}">
+        <view
+          wx:for="{{fabrics}}"
+          wx:key="id"
+          class="fabric-item {{item.selected ? 'selected' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="onSelectFabric"
+        >
+          <image class="fabric-image" src="{{item.image}}" mode="aspectFill" />
+          <view wx:if="{{item.selected}}" class="fabric-check">✓</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 合成效果区 -->
+    <view class="section">
+      <text class="section-title">合成效果</text>
+
+      <!-- 合成结果 -->
+      <view wx:if="{{result}}" class="result-container" bindtap="onViewResult">
+        <image class="result-image" src="{{result.image}}" mode="aspectFill" />
+        <view class="result-overlay">
+          <text class="result-hint">点击查看详情</text>
+        </view>
+      </view>
+
+      <!-- 空状态 -->
+      <view wx:else class="empty-state">
+        <text class="empty-icon">🎨</text>
+        <text class="empty-text">上传图片后开始合成</text>
+      </view>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="action-area">
+      <button
+        class="btn-fuse {{isProcessing ? 'disabled' : ''}}"
+        bindtap="onStartFuse"
+        disabled="{{isProcessing}}"
+      >
+        {{isProcessing ? '合成中...' : '开始合成'}}
+      </button>
+    </view>
+  </scroll-view>
+
+  <!-- 底部导航 -->
+  <tab-bar current="0" />
+</view>

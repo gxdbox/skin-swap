@@ -1,0 +1,25 @@
+<view class="upload-box" bindtap="onUpload">
+  <!-- 未上传状态 -->
+  <view wx:if="{{!image}}" class="upload-placeholder">
+    <text class="upload-icon">+</text>
+    <text class="upload-hint">{{hint}}</text>
+  </view>
+
+  <!-- 已上传状态 -->
+  <view wx:else class="upload-preview">
+    <image
+      class="preview-image"
+      src="{{image}}"
+      mode="{{mode}}"
+      bindtap="onPreview"
+    />
+    <!-- 删除按钮 -->
+    <view
+      wx:if="{{showDelete && !disabled}}"
+      class="delete-btn"
+      catchtap="onDelete"
+    >
+      <text class="delete-icon">×</text>
+    </view>
+  </view>
+</view>

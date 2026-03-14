@@ -1,0 +1,19 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/detail/index",
+    "pages/history/index",
+    "pages/profile/index"
+  ],
+  "window": {
+    "backgroundColor": "#FFFAF5",
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#FFFAF5",
+    "navigationBarTitleText": "图片融合",
+    "navigationBarTextStyle": "black"
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents",
+  "usingComponents": {}
+}

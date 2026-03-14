@@ -1,0 +1,143 @@
+.page {
+  min-height: 100vh;
+  background: #FFFAF5;
+  display: flex;
+  flex-direction: column;
+}
+
+.status-bar {
+  background: #FFFAF5;
+}
+
+.nav-bar {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40rpx;
+  background: #FFFAF5;
+}
+
+.nav-back {
+  width: 80rpx;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.back-icon {
+  font-size: 40rpx;
+  color: #5C4033;
+}
+
+.nav-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #5C4033;
+}
+
+.nav-placeholder {
+  width: 80rpx;
+}
+
+.content-scroll {
+  flex: 1;
+  padding: 0 40rpx 48rpx;
+}
+
+/* 预览卡片 */
+.preview-card {
+  background: #F5EDE4;
+  border-radius: 32rpx;
+  padding: 48rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24rpx;
+}
+
+.preview-image {
+  width: 560rpx;
+  height: 560rpx;
+  border-radius: 24rpx;
+  background: #C4A882;
+}
+
+.preview-label {
+  font-size: 28rpx;
+  color: #8B7355;
+}
+
+/* 信息区 */
+.info-section {
+  margin-top: 40rpx;
+  background: #F5EDE4;
+  border-radius: 32rpx;
+  padding: 32rpx;
+}
+
+.info-title {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #5C4033;
+  margin-bottom: 32rpx;
+  display: block;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #E8DDD0;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 28rpx;
+  color: #8B7355;
+}
+
+.info-value {
+  font-size: 28rpx;
+  color: #5C4033;
+}
+
+/* 操作区 */
+.action-section {
+  margin-top: 40rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.btn-save, .btn-share {
+  width: 100%;
+  height: 100rpx;
+  border-radius: 50rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+}
+
+.btn-save {
+  background: #C4875A;
+  color: #FFFFFF;
+}
+
+.btn-share {
+  background: #F5EDE4;
+  color: #C4875A;
+  border: 2rpx solid #E8DDD0;
+}
+
+.btn-icon {
+  font-size: 36rpx;
+}

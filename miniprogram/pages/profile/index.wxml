@@ -1,0 +1,74 @@
+<view class="page">
+  <!-- 状态栏 -->
+  <view class="status-bar" style="height: {{statusBarHeight}}px;"></view>
+
+  <!-- 标题栏 -->
+  <view class="nav-bar">
+    <text class="nav-title">我的</text>
+    <view class="nav-setting" bindtap="onMenuTap" data-key="settings">
+      <text class="setting-icon">⚙️</text>
+    </view>
+  </view>
+
+  <!-- 主内容 -->
+  <scroll-view scroll-y class="content-scroll">
+    <!-- 用户卡片 -->
+    <view class="user-card" bindtap="onUserCardTap">
+      <!-- 未登录状态 -->
+      <view wx:if="{{!userInfo}}" class="user-avatar">
+        <text class="avatar-placeholder">👤</text>
+      </view>
+      <!-- 已登录状态 -->
+      <image wx:else class="user-avatar" src="{{userInfo.avatarUrl}}" mode="aspectFill" />
+
+      <view class="user-info">
+        <text class="user-name">{{userInfo ? userInfo.nickName : '点击登录'}}</text>
+        <text class="user-id">{{userInfo ? 'ID: ' + (userInfo.openid || '用户') : '登录后享受更多功能'}}</text>
+      </view>
+
+      <text class="arrow-icon">›</text>
+    </view>
+
+    <!-- 统计卡片 -->
+    <view class="stats-card">
+      <view class="stat-item">
+        <text class="stat-value">{{stats.fusionCount}}</text>
+        <text class="stat-label">合成次数</text>
+      </view>
+
+      <view class="stat-divider"></view>
+
+      <view class="stat-item">
+        <text class="stat-value">{{stats.saveCount}}</text>
+        <text class="stat-label">保存次数</text>
+      </view>
+
+      <view class="stat-divider"></view>
+
+      <view class="stat-item">
+        <text class="stat-value">{{stats.fusionCount > 0 ? '活跃' : '新用户'}}</text>
+        <text class="stat-label">用户状态</text>
+      </view>
+    </view>
+
+    <!-- 菜单卡片 -->
+    <view class="menu-card">
+      <view
+        wx:for="{{menuList}}"
+        wx:key="key"
+        class="menu-item {{item.key !== 'settings' ? 'has-border' : ''}}"
+        data-key="{{item.key}}"
+        bindtap="onMenuTap"
+      >
+        <view class="menu-left">
+          <text class="menu-icon">{{item.icon}}</text>
+          <text class="menu-name">{{item.name}}</text>
+        </view>
+        <text class="menu-arrow">›</text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 底部导航 -->
+  <tab-bar current="2" />
+</view>
