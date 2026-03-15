@@ -133,10 +133,10 @@ async function processImageCombine(taskId, sofaImageUrl, fabricImageUrl, userId)
     console.log('API 调用结果:', JSON.stringify(result))
 
     // 如果是异步任务，需要轮询结果
-    if (result.isAsync && result.taskId) {
-      console.log('异步任务已提交，Task ID:', result.taskId)
+    if (result.isAsync && result.requestId) {
+      console.log('异步任务已提交，Request ID:', result.requestId)
       console.log('开始轮询结果...')
-      await pollWan25TaskResult(taskId, result.taskId, userId, sofaImageUrl, fabricImageUrl)
+      await pollFalAiTaskResult(taskId, result.requestId, userId, sofaImageUrl, fabricImageUrl)
     } else if (result.imageUrl) {
       // 同步返回结果
       console.log('同步返回结果，图片URL:', result.imageUrl)
@@ -376,9 +376,11 @@ async function callFalAiImageEdit(sofaImageUrl, fabricImageUrl) {
     // FAL.ai 返回的结果格式
     const data = response.data
     
-    // 检查是否有生成结果
-    if (data.images && data.images.length > 0) {
-      const imageUrl = data.images[0].url
+    console.log('响应状态:', data.status)
+    
+    // 检查是否有生成结果（同步完成）
+    if (data.result && data.result.images && data.result.images.length > 0) {
+      const imageUrl = data.result.images[0].url
       console.log('图片生成成功:', imageUrl)
       return { imageUrl, isAsync: false }
     }
@@ -386,6 +388,7 @@ async function callFalAiImageEdit(sofaImageUrl, fabricImageUrl) {
     // 如果返回了 request_id，说明是异步任务
     if (data.request_id) {
       console.log('异步任务已提交，Request ID:', data.request_id)
+      console.log('任务状态:', data.status)
       return { requestId: data.request_id, isAsync: true }
     }
 
@@ -398,6 +401,112 @@ async function callFalAiImageEdit(sofaImageUrl, fabricImageUrl) {
     console.error('错误信息:', error.message)
     console.error('错误堆栈:', error.stack)
     console.error('完整错误:', JSON.stringify(error, null, 2))
+
+    throw error
+  }
+}
+
+// 轮询 FAL.ai 异步任务结果
+async function pollFalAiTaskResult(taskId, requestId, userId, sofaImageUrl, fabricImageUrl, maxAttempts = 120) {
+  console.log(`========== 开始轮询 FAL.ai 任务结果 ==========`)
+  console.log(`Task ID: ${taskId}`)
+  console.log(`Request ID: ${requestId}`)
+  console.log(`最大轮询次数: ${maxAttempts}`)
+
+  let attempts = 0
+  const pollInterval = 1000  // 1 秒轮询一次
+
+  const poll = async () => {
+    try {
+      attempts++
+      console.log(`\n轮询第 ${attempts} 次...`)
+
+      const statusUrl = `https://queue.fal.run/fal-ai/playground-v25/requests/${requestId}/status`
+      console.log('查询 URL:', statusUrl)
+
+      const response = await axios.get(
+        statusUrl,
+        {
+          headers: {
+            'Authorization': `Key ${FAL_API_KEY}`
+          },
+          timeout: 30000
+        }
+      )
+
+      const data = response.data
+      console.log('任务状态:', data.status)
+
+      if (data.status === 'COMPLETED') {
+        console.log('✓ 任务已完成')
+        
+        if (data.result && data.result.images && data.result.images.length > 0) {
+          const imageUrl = data.result.images[0].url
+          console.log('生成的图片 URL:', imageUrl)
+          
+          // 保存结果
+          await saveTaskResult(taskId, imageUrl, userId, sofaImageUrl, fabricImageUrl)
+          return
+        } else {
+          throw new Error('任务已完成但未获取到图片')
+        }
+      } else if (data.status === 'FAILED') {
+        console.error('✗ 任务失败')
+        console.error('错误信息:', data.error)
+        throw new Error(`FAL.ai 任务失败: ${data.error}`)
+      } else if (data.status === 'IN_PROGRESS' || data.status === 'IN_QUEUE') {
+        console.log('任务进行中，继续轮询...')
+        
+        if (attempts >= maxAttempts) {
+          throw new Error(`轮询超时，已尝试 ${maxAttempts} 次`)
+        }
+
+        // 等待后继续轮询
+        await new Promise(resolve => setTimeout(resolve, pollInterval))
+        await poll()
+      } else {
+        console.log('未知状态:', data.status)
+        
+        if (attempts >= maxAttempts) {
+          throw new Error(`轮询超时，已尝试 ${maxAttempts} 次`)
+        }
+
+        await new Promise(resolve => setTimeout(resolve, pollInterval))
+        await poll()
+      }
+    } catch (error) {
+      console.error(`轮询第 ${attempts} 次失败:`, error.message)
+      
+      if (attempts >= maxAttempts) {
+        throw new Error(`轮询超时，已尝试 ${maxAttempts} 次，最后错误: ${error.message}`)
+      }
+
+      // 等待后重试
+      await new Promise(resolve => setTimeout(resolve, pollInterval))
+      await poll()
+    }
+  }
+
+  try {
+    await poll()
+    console.log(`========== FAL.ai 任务轮询完成 ==========`)
+  } catch (error) {
+    console.error(`========== FAL.ai 任务轮询失败 ==========`)
+    console.error('错误:', error.message)
+
+    // 更新任务状态为失败
+    try {
+      await db.collection('ai_tasks').doc(taskId).update({
+        data: {
+          status: 'failed',
+          error: error.message,
+          updatedAt: db.serverDate()
+        }
+      })
+      console.log('任务状态已更新为失败')
+    } catch (updateError) {
+      console.error('更新任务状态失败:', updateError)
+    }
 
     throw error
   }
