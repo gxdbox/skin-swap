@@ -3,9 +3,9 @@ const axios = require('axios')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
-// 阿里云 Wan2.5 API 配置
-const DASHSCOPE_API_KEY = 'sk-d3d41e9bdca04039b04242af5249fb0b'
-const DASHSCOPE_BASE_URL = 'https://dashscope.aliyuncs.com/api/v1'
+// FAL.ai API 配置
+const FAL_API_KEY = '3287f5ec-0b40-44e3-832f-cf127e58a93c:562b39a1d04a095b8b9f5acd9aa09ccd'
+const FAL_API_URL = 'https://queue.fal.run/fal-ai/playground-v25/inpainting'
 
 const db = cloud.database()
 
@@ -126,9 +126,9 @@ async function processImageCombine(taskId, sofaImageUrl, fabricImageUrl, userId)
     console.log('沙发临时URL:', sofaTempUrl)
     console.log('布料临时URL:', fabricTempUrl)
 
-    // 调用 Qwen 图像编辑 API 进行图像合成
-    console.log('正在调用 Qwen 图像编辑 API...')
-    const result = await callQwenImageEdit(sofaTempUrl, fabricTempUrl)
+    // 调用 FAL.ai API 进行图像合成
+    console.log('正在调用 FAL.ai API...')
+    const result = await callFalAiImageEdit(sofaTempUrl, fabricTempUrl)
 
     console.log('API 调用结果:', JSON.stringify(result))
 
@@ -309,62 +309,47 @@ async function downloadAndConvertToBase64(url) {
   }
 }
 
-// 阿里云 Qwen 图像编辑 API - 多图融合
-async function callQwenImageEdit(sofaImageUrl, fabricImageUrl) {
-  console.log('========== 调用 Qwen 图像编辑 API ==========')
+// FAL.ai 图像编辑 API
+async function callFalAiImageEdit(sofaImageUrl, fabricImageUrl) {
+  console.log('========== 调用 FAL.ai API ==========')
   try {
     const prompt = '将第二张图片中的布料纹理和颜色应用到第一张图片中的沙发上。沙发应保持原始形状和结构，但布料颜色和纹理应替换为新布料纹理。生成逼真、专业的效果。'
 
-    console.log('API Key:', DASHSCOPE_API_KEY ? '已配置' : '未配置')
-    console.log('API Base URL:', DASHSCOPE_BASE_URL)
+    console.log('API Key:', FAL_API_KEY && FAL_API_KEY !== 'YOUR_FAL_API_KEY' ? '已配置' : '未配置')
+    console.log('API URL:', FAL_API_URL)
     console.log('沙发图片URL:', sofaImageUrl)
     console.log('布料图片URL:', fabricImageUrl)
 
-    // 使用正确的请求格式：messages 格式
+    if (FAL_API_KEY === 'YOUR_FAL_API_KEY') {
+      throw new Error('FAL API Key 未配置，请设置有效的 API Key')
+    }
+
+    // FAL.ai 请求体
     const requestBody = {
-      model: 'qwen-image-2.0-pro',
-      input: {
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                image: sofaImageUrl
-              },
-              {
-                image: fabricImageUrl
-              },
-              {
-                text: prompt
-              }
-            ]
-          }
-        ]
-      },
-      parameters: {
-        n: 1
-      }
+      image_url: sofaImageUrl,
+      prompt: prompt,
+      seed: Math.floor(Math.random() * 1000000)
     }
 
     console.log('请求体:', JSON.stringify(requestBody, null, 2))
 
     const headers = {
-      'Authorization': `Bearer ${DASHSCOPE_API_KEY}`,
+      'Authorization': `Key ${FAL_API_KEY}`,
       'Content-Type': 'application/json'
     }
 
-    console.log('请求头:', JSON.stringify(headers))
-    console.log('请求URL:', `${DASHSCOPE_BASE_URL}/services/aigc/multimodal-generation/generation`)
+    console.log('请求头:', JSON.stringify({ 'Authorization': 'Key ***', 'Content-Type': 'application/json' }))
+    console.log('请求URL:', FAL_API_URL)
 
     const startTime = Date.now()
     let response
     try {
       response = await axios.post(
-        `${DASHSCOPE_BASE_URL}/services/aigc/multimodal-generation/generation`,
+        FAL_API_URL,
         requestBody,
         {
           headers: headers,
-          timeout: 60000
+          timeout: 120000  // FAL.ai 可能需要更长的超时时间
         }
       )
     } catch (axiosError) {
@@ -379,7 +364,7 @@ async function callQwenImageEdit(sofaImageUrl, fabricImageUrl) {
     }
 
     const duration = Date.now() - startTime
-    console.log(`Qwen API 响应成功，耗时: ${duration}ms`)
+    console.log(`FAL.ai API 响应成功，耗时: ${duration}ms`)
     console.log('响应状态码:', response.status)
     console.log('响应数据:', JSON.stringify(response.data, null, 2))
 
@@ -388,30 +373,27 @@ async function callQwenImageEdit(sofaImageUrl, fabricImageUrl) {
       throw new Error('API 响应为空')
     }
 
-    const output = response.data.output
+    // FAL.ai 返回的结果格式
+    const data = response.data
     
-    if (!output) {
-      console.error('输出字段不存在，完整响应:', JSON.stringify(response.data))
-      throw new Error('API 响应中没有 output 字段')
-    }
-
     // 检查是否有生成结果
-    if (output.choices && output.choices.length > 0) {
-      const choice = output.choices[0]
-      if (choice.message && choice.message.content && choice.message.content.length > 0) {
-        const content = choice.message.content[0]
-        if (content.image) {
-          console.log('图片生成成功:', content.image)
-          return { imageUrl: content.image, isAsync: false }
-        }
-      }
+    if (data.images && data.images.length > 0) {
+      const imageUrl = data.images[0].url
+      console.log('图片生成成功:', imageUrl)
+      return { imageUrl, isAsync: false }
     }
 
-    console.error('未获取到预期结果，输出内容:', JSON.stringify(output))
+    // 如果返回了 request_id，说明是异步任务
+    if (data.request_id) {
+      console.log('异步任务已提交，Request ID:', data.request_id)
+      return { requestId: data.request_id, isAsync: true }
+    }
+
+    console.error('未获取到预期结果，响应内容:', JSON.stringify(data))
     throw new Error('未获取到生成结果')
 
   } catch (error) {
-    console.error('========== Qwen API 调用失败 ==========')
+    console.error('========== FAL.ai API 调用失败 ==========')
     console.error('错误类型:', error.constructor.name)
     console.error('错误信息:', error.message)
     console.error('错误堆栈:', error.stack)
