@@ -35,5 +35,10 @@
   "sitemapLocation": "sitemap.json",
   "style": "v2",
   "lazyCodeLoading": "requiredComponents",
-  "usingComponents": {}
+  "usingComponents": {},
+  "permission": {
+    "scope.writePhotosAlbum": {
+      "desc": "需要保存图片到相册"
+    }
+  }
 }
