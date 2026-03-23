@@ -1,24 +1,17 @@
 const cloud = require('wx-server-sdk')
-const axios = require('axios')
-const OpenAI = require('openai')
+const AIAdapterFactory = require('./adapters/AIAdapterFactory')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
-
-// Gemini API 配置
-const GEMINI_API_KEY = 'sk-RCdyzeHPZpVD2z5IoGeyGytIRAP2VF7ah1zv7BplkZiHd0dl'
-const GEMINI_BASE_URL = 'https://api.vectorengine.ai/v1'
-
-// 初始化 OpenAI 客户端
-const openai = new OpenAI({
-  apiKey: GEMINI_API_KEY,
-  baseURL: GEMINI_BASE_URL
-})
 
 const db = cloud.database()
 
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
-  const userId = wxContext.OPENID
+  const userId = wxContext.OPENIDs
+
+  console.log('========== 云函数 combinePictures 被调用 ==========')
+  console.log('收到事件:', JSON.stringify(event, null, 2))
+  console.log('用户ID:', userId)
 
   try {
     const { sofaImageUrl, fabricImageUrl, action } = event
@@ -99,8 +92,13 @@ exports.main = async (event, context) => {
 
 // 异步处理图像合成任务
 async function processImageCombine(taskId, sofaImageUrl, fabricImageUrl, userId) {
+  console.log('========== 开始异步处理任务 ==========')
+  console.log('任务ID:', taskId)
+  console.log('沙发图片:', sofaImageUrl)
+  console.log('布料图片:', fabricImageUrl)
+
   try {
-    console.log(`开始处理任务 ${taskId}`)
+    console.log('步骤1: 获取云存储文件临时下载链接...')
 
     // 获取云存储文件的临时下载链接
     const [sofaTempUrl, fabricTempUrl] = await Promise.all([
@@ -109,17 +107,16 @@ async function processImageCombine(taskId, sofaImageUrl, fabricImageUrl, userId)
     ])
 
     console.log('已获取临时URL')
+    console.log('沙发临时URL:', sofaTempUrl)
+    console.log('布料临时URL:', fabricTempUrl)
 
-    // 下载图片并转换为 base64
-    const [sofaBase64, fabricBase64] = await Promise.all([
-      downloadAndConvertToBase64(sofaTempUrl),
-      downloadAndConvertToBase64(fabricTempUrl)
-    ])
+    // 使用 AI 适配器进行图像合成
+    const aiAdapter = AIAdapterFactory.createAdapter()
+    console.log('使用 AI 厂商:', aiAdapter.getName())
+    
+    const result = await aiAdapter.combineImages(sofaTempUrl, fabricTempUrl)
 
-    console.log('图片已转换为 base64 格式')
-
-    // 调用 Gemini Flash API 进行图像合成
-    const result = await callGeminiImageCombine(sofaBase64, fabricBase64)
+    console.log('AI 服务返回结果:', result)
 
     // 更新任务状态为完成
     await db.collection('ai_tasks').doc(taskId).update({
@@ -202,129 +199,5 @@ async function getFileDownloadUrl(fileID) {
   } catch (error) {
     console.error('获取临时链接失败:', error)
     throw new Error(`获取文件链接失败: ${error.message}`)
-  }
-}
-
-// 下载图片并转换为 base64
-async function downloadAndConvertToBase64(url) {
-  try {
-    const response = await axios.get(url, {
-      responseType: 'arraybuffer',
-      timeout: 30000
-    })
-
-    const base64 = Buffer.from(response.data).toString('base64')
-    const mimeType = response.headers['content-type'] || 'image/jpeg'
-
-    return `data:${mimeType};base64,${base64}`
-  } catch (error) {
-    console.error('下载图片失败:', error)
-    throw new Error(`下载图片失败: ${error.message}`)
-  }
-}
-
-// Gemini Flash AI 图像合成函数
-async function callGeminiImageCombine(sofaImageUrl, fabricImageUrl) {
-  try {
-    const prompt = `Apply the fabric pattern and texture from the second image to the sofa in the first image. The sofa should maintain its original shape and structure, but the fabric color and pattern should be replaced with the new fabric texture from the second image. Make it look realistic and professional. Generate only the modified sofa image.`
-
-    console.log('调用 Gemini Flash API...')
-
-    const startTime = Date.now()
-    const response = await openai.chat.completions.create({
-      model: 'gemini-3.1-flash-image-preview',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            {
-              type: 'image_url',
-              image_url: { url: sofaImageUrl }
-            },
-            {
-              type: 'image_url',
-              image_url: { url: fabricImageUrl }
-            }
-          ]
-        }
-      ],
-      max_tokens: 4096
-    })
-
-    const duration = Date.now() - startTime
-    console.log(`Gemini API 响应成功，耗时: ${duration}ms`)
-
-    if (!response.choices || response.choices.length === 0) {
-      throw new Error('未生成响应')
-    }
-
-    const content = response.choices[0].message.content
-
-    if (!content) {
-      throw new Error('响应内容为空')
-    }
-
-    // 提取图片 URL 或 base64 数据
-    let imageUrl = ''
-
-    // 检查是否有直接的 URL
-    const urlMatch = content.match(/https?:\/\/[^\s)]+/)
-    if (urlMatch) {
-      imageUrl = urlMatch[0]
-      console.log('找到直接 URL:', imageUrl)
-      return { imageUrl }
-    }
-
-    // 检查是否有 base64 数据
-    if (content.includes('base64')) {
-      console.log('找到 base64 数据，保存到云存储...')
-
-      let base64Data = ''
-
-      const base64Match = content.match(/data:image\/([^;]+);base64,([A-Za-z0-9+/=]+)/)
-      if (base64Match) {
-        base64Data = base64Match[2]
-      } else {
-        const pureBase64Match = content.match(/[A-Za-z0-9+/]{100,}={0,2}/)
-        if (pureBase64Match) {
-          base64Data = pureBase64Match[0]
-        }
-      }
-
-      if (base64Data) {
-        const buffer = Buffer.from(base64Data, 'base64')
-        const timestamp = Date.now()
-        const uploadResult = await cloud.uploadFile({
-          cloudPath: `ai-combined/${timestamp}-gemini.png`,
-          fileContent: buffer
-        })
-
-        console.log('图片已保存到云存储:', uploadResult.fileID)
-        return { imageUrl: uploadResult.fileID }
-      }
-    }
-
-    throw new Error(`未找到图片数据。响应内容: ${content.substring(0, 200)}`)
-
-  } catch (error) {
-    console.error('Gemini API 调用失败:', error.message)
-
-    if (error.response) {
-      const status = error.response.status
-      if (status === 401) {
-        throw new Error('认证失败：API Key 无效')
-      } else if (status === 429) {
-        throw new Error('请求过于频繁，请稍后再试')
-      } else {
-        throw new Error(`API 错误 (${status}): ${error.response.data?.error || error.message}`)
-      }
-    }
-
-    if (error.code === 'ECONNABORTED') {
-      throw new Error('请求超时，图片生成耗时过长')
-    }
-
-    throw error
   }
 }

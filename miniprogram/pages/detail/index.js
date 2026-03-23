@@ -33,14 +33,24 @@ Page({
     try {
       this.setData({ isSaving: true });
 
-      // 如果是云存储路径，先下载
+      // 根据图片路径类型处理
       let filePath = result.image;
+
+      // 如果是云存储路径，先下载
       if (filePath.startsWith('cloud://')) {
         const res = await wx.cloud.downloadFile({
           fileID: filePath
         });
         filePath = res.tempFilePath;
       }
+      // 如果是网络 URL，先下载到本地
+      else if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+        const res = await wx.downloadFile({
+          url: filePath
+        });
+        filePath = res.tempFilePath;
+      }
+      // 本地路径直接使用
 
       // 保存到相册
       await wx.saveImageToPhotosAlbum({
