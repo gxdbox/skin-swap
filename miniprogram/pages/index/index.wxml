@@ -102,13 +102,13 @@
 
       <!-- 预览图 -->
       <view class="preview-section">
-        <view class="preview-item">
+        <view class="preview-item" wx:if="{{sofaImage}}">
           <image class="preview-image" src="{{sofaImage}}" mode="aspectFill" />
           <text class="preview-label">沙发原图</text>
         </view>
-        <view class="preview-arrow">→</view>
-        <view class="preview-item">
-          <image class="preview-image" src="{{customFabrics[0]?.image}}" mode="aspectFill" />
+        <view class="preview-arrow" wx:if="{{sofaImage && customFabrics[0]}}">→</view>
+        <view class="preview-item" wx:if="{{customFabrics[0]}}">
+          <image class="preview-image" src="{{customFabrics[0].image}}" mode="aspectFill" />
           <text class="preview-label">布料参考</text>
         </view>
       </view>
