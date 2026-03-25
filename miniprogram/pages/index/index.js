@@ -47,8 +47,8 @@ Page({
 
       util.showLoading('上传中...');
 
-      // 压缩图片
-      const compressedPath = await util.compressImage(tempPath, 80);
+      // 压缩图片 - 限制尺寸和质量
+      const compressedPath = await compressImageForAI(tempPath);
 
       // 上传到云存储
       const cloudPath = util.generateCloudPath(app.globalData.openid || 'anonymous', 'sofa');
@@ -82,7 +82,7 @@ Page({
     
     // 检查是否已达到上限
     if (customFabrics.length >= 5) {
-      util.showToast('最多只能上传5张布料');
+      util.showToast('最多只能上传 5 张布料');
       return;
     }
 
@@ -92,8 +92,8 @@ Page({
 
       util.showLoading('上传中...');
 
-      // 压缩图片
-      const compressedPath = await util.compressImage(tempPath, 80);
+      // 压缩图片 - 限制尺寸和质量
+      const compressedPath = await compressImageForAI(tempPath);
 
       // 上传到云存储
       const cloudPath = util.generateCloudPath(app.globalData.openid || 'anonymous', 'fabric');
@@ -270,8 +270,82 @@ Page({
   // 分享
   onShareAppMessage() {
     return {
-      title: '沙发换肤神器 - AI图片融合',
+      title: '沙发换肤神器 - AI 图片融合',
       path: '/pages/index/index'
     };
   }
 });
+
+// 压缩图片用于 AI 处理 - 限制尺寸和质量
+async function compressImageForAI(tempPath) {
+  return new Promise((resolve, reject) => {
+    // 先获取图片信息
+    wx.getImageInfo({
+      src: tempPath,
+      success: (infoRes) => {
+        const maxWidth = 1024;
+        const maxHeight = 1024;
+        let width = infoRes.width;
+        let height = infoRes.height;
+
+        // 计算压缩比例
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = Math.floor(width * ratio);
+          height = Math.floor(height * ratio);
+        }
+
+        // 使用 canvas 压缩
+        compressImageWithCanvas(tempPath, width, height, 80)
+          .then(resolve)
+          .catch(reject);
+      },
+      fail: (err) => {
+        // 如果获取信息失败，直接使用微信压缩
+        util.compressImage(tempPath, 80)
+          .then(resolve)
+          .catch(reject);
+      }
+    });
+  });
+}
+
+// 使用 canvas 压缩图片
+async function compressImageWithCanvas(srcPath, width, height, quality) {
+  return new Promise((resolve, reject) => {
+    wx.createSelectorQuery()
+      .select('#hiddenCanvas')
+      .fields({ node: true, size: true })
+      .exec((res) => {
+        if (!res[0] || !res[0].node) {
+          // 如果没有 canvas，使用普通压缩
+          util.compressImage(srcPath, quality)
+            .then(resolve)
+            .catch(reject);
+          return;
+        }
+
+        const canvas = res[0].node;
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const img = canvas.createImage();
+        img.src = srcPath;
+
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, width, height);
+          wx.canvasToTempFilePath({
+            canvas: canvas,
+            fileType: 'jpg',
+            quality: quality / 100,
+            success: (res) => resolve(res.tempFilePath),
+            fail: (err) => reject(err)
+          });
+        };
+
+        img.onerror = (err) => reject(err);
+      });
+  });
+}

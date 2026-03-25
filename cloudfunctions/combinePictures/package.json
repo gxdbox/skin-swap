@@ -1,11 +1,12 @@
 {
   "name": "combinePictures",
   "version": "1.0.0",
-  "description": "AI图片融合云函数 - 使用 FAL.ai API",
+  "description": "AI 图片融合云函数 - 使用 FAL.ai API",
   "main": "index.js",
   "dependencies": {
     "wx-server-sdk": "~2.6.3",
     "axios": "^0.27.2",
-    "@fal-ai/serverless-client": "^0.14.2"
+    "jimp": "^0.22.12"
   }
+}
 }

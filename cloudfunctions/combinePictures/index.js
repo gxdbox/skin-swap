@@ -1,9 +1,19 @@
 const cloud = require('wx-server-sdk')
 const AIAdapterFactory = require('./adapters/AIAdapterFactory')
+const jimp = require('jimp')
+const axios = require('axios')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
+
+// 图片配置 - 优化速度和大小
+const IMAGE_CONFIG = {
+  maxWidth: 1024, // 上传到 AI 的最大宽度
+  maxHeight: 1024, // 上传到 AI 的最大高度
+  outputQuality: 80, // 输出图片质量 (%)
+  outputMaxWidth: 1280 // 输出图片最大宽度
+}
 
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
@@ -118,11 +128,17 @@ async function processImageCombine(taskId, sofaImageUrl, fabricImageUrl, userId)
 
     console.log('AI 服务返回结果:', result)
 
+    // 压缩并上传结果图片到云存储
+    console.log('步骤 2: 压缩并上传结果图片...')
+    const compressedResultUrl = await compressAndUploadImage(result.imageUrl, taskId, userId)
+
+    console.log('压缩后的图片 URL:', compressedResultUrl)
+
     // 更新任务状态为完成
     await db.collection('ai_tasks').doc(taskId).update({
       data: {
         status: 'completed',
-        resultImageUrl: result.imageUrl,
+        resultImageUrl: compressedResultUrl,
         updatedAt: db.serverDate(),
         completedAt: db.serverDate()
       }
@@ -134,7 +150,7 @@ async function processImageCombine(taskId, sofaImageUrl, fabricImageUrl, userId)
         userId,
         sofaImage: sofaImageUrl,
         fabricImage: fabricImageUrl,
-        resultImage: result.imageUrl,
+        resultImage: compressedResultUrl,
         taskId,
         createdAt: db.serverDate()
       }
@@ -143,7 +159,7 @@ async function processImageCombine(taskId, sofaImageUrl, fabricImageUrl, userId)
     // 更新用户合成次数
     await updateUserFusionCount(userId)
 
-    console.log(`任务 ${taskId} 完成`)
+    console.log(`任务 ${taskId} 完成，图片已压缩存储`)
 
   } catch (error) {
     console.error(`任务 ${taskId} 失败:`, error)
@@ -182,10 +198,84 @@ async function updateUserFusionCount(userId) {
 // 获取云存储文件的临时下载链接
 async function getFileDownloadUrl(fileID) {
   try {
-    // 如果是HTTP URL，直接返回
+    // 如果是 HTTP URL，直接返回
     if (fileID.startsWith('http')) {
       return fileID
     }
+
+    const result = await cloud.getTempFileURL({
+      fileList: [fileID]
+    })
+
+    if (result.fileList && result.fileList.length > 0) {
+      return result.fileList[0].tempFileURL
+    }
+
+    throw new Error('无法获取文件临时链接')
+  } catch (error) {
+    console.error('获取临时链接失败:', error)
+    throw new Error(`获取文件链接失败：${error.message}`)
+  }
+}
+
+// 压缩并上传图片到云存储
+async function compressAndUploadImage(imageUrl, taskId, userId) {
+  try {
+    console.log('下载 AI 生成的图片...')
+    
+    // 下载图片
+    const response = await axios.get(imageUrl, {
+      responseType: 'arraybuffer',
+      timeout: 30000
+    })
+
+    const imageBuffer = Buffer.from(response.data)
+    
+    console.log('图片下载完成，原始大小:', (imageBuffer.length / 1024 / 1024).toFixed(2), 'MB')
+
+    // 使用 Jimp 压缩图片
+    const image = await jimp.read(imageBuffer)
+    
+    // 调整尺寸（如果超过最大宽度）
+    if (image.getWidth() > IMAGE_CONFIG.outputMaxWidth) {
+      image.resize(IMAGE_CONFIG.outputMaxWidth, jimp.AUTO)
+    }
+    
+    console.log('调整后尺寸:', image.getWidth(), 'x', image.getHeight())
+
+    // 压缩并转换为 buffer
+    const compressedBuffer = await image.quality(IMAGE_CONFIG.outputQuality).getBufferAsync(jimp.MIME_JPEG)
+    
+    console.log('压缩后大小:', (compressedBuffer.length / 1024 / 1024).toFixed(2), 'MB')
+
+    // 生成云存储路径
+    const cloudPath = `results/${userId}/${taskId}.jpg`
+
+    // 上传到云存储
+    const uploadResult = await cloud.uploadFile({
+      cloudPath: cloudPath,
+      fileContent: compressedBuffer
+    })
+
+    console.log('上传到云存储成功，fileID:', uploadResult.fileID)
+
+    // 获取临时访问 URL（用于返回）
+    const tempUrlResult = await cloud.getTempFileURL({
+      fileList: [uploadResult.fileID]
+    })
+
+    if (tempUrlResult.fileList && tempUrlResult.fileList.length > 0) {
+      return tempUrlResult.fileList[0].tempFileURL
+    }
+
+    return uploadResult.fileID
+
+  } catch (error) {
+    console.error('压缩并上传图片失败:', error)
+    // 如果压缩失败，返回原始 URL
+    return imageUrl
+  }
+}
 
     const result = await cloud.getTempFileURL({
       fileList: [fileID]
