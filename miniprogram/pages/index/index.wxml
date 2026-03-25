@@ -82,4 +82,47 @@
       </button>
     </view>
   </view>
+
+  <!-- AI 合成中 Loading 弹窗 -->
+  <view class="loading-overlay {{isProcessing ? 'show' : ''}}" wx:if="{{isProcessing}}">
+    <view class="loading-content">
+      <!-- 标题 -->
+      <view class="loading-title">
+        <text class="loading-icon">✨</text>
+        <text class="loading-title-text">AI 正在为您的沙发换肤</text>
+      </view>
+
+      <!-- 进度条 -->
+      <view class="progress-container">
+        <view class="progress-bar">
+          <view class="progress-fill" style="width: {{loadingProgress}}%"></view>
+        </view>
+        <text class="progress-text">{{loadingProgress}}%</text>
+      </view>
+
+      <!-- 预览图 -->
+      <view class="preview-section">
+        <view class="preview-item">
+          <image class="preview-image" src="{{sofaImage}}" mode="aspectFill" />
+          <text class="preview-label">沙发原图</text>
+        </view>
+        <view class="preview-arrow">→</view>
+        <view class="preview-item">
+          <image class="preview-image" src="{{customFabrics[0]?.image}}" mode="aspectFill" />
+          <text class="preview-label">布料参考</text>
+        </view>
+      </view>
+
+      <!-- 时间估算 -->
+      <view class="time-estimate">
+        <text class="time-icon">⏱️</text>
+        <text class="time-text">{{estimatedTimeText}}</text>
+      </view>
+
+      <!-- 趣味提示 -->
+      <view class="loading-tip">
+        <text class="loading-tip-text">{{loadingTip}}</text>
+      </view>
+    </view>
+  </view>
 </view>
