@@ -43,18 +43,24 @@ Page({
         });
         filePath = res.tempFilePath;
       }
-      // 如果是网络 URL，先下载到本地
+      // 如果是网络 URL，先获取图片信息（会自动下载）
       else if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
-        const res = await wx.downloadFile({
-          url: filePath
+        // 使用 wx.getImageInfo 获取本地路径，比 downloadFile 更可靠
+        const res = await wx.getImageInfo({
+          src: filePath
         });
-        filePath = res.tempFilePath;
+        filePath = res.path;
       }
       // 本地路径直接使用
 
+      // 确保 filePath 是字符串
+      if (!filePath || typeof filePath !== 'string') {
+        throw new Error('无效的文件路径：' + JSON.stringify(filePath));
+      }
+
       // 保存到相册
       await wx.saveImageToPhotosAlbum({
-        filePath
+        filePath: filePath
       });
 
       util.showSuccess('已保存到相册');
@@ -80,7 +86,7 @@ Page({
           }
         });
       } else {
-        util.showError('保存失败');
+        util.showError('保存失败：' + (err.errMsg || err.message));
       }
     } finally {
       this.setData({ isSaving: false });
