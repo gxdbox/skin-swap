@@ -7,7 +7,7 @@ const db = cloud.database()
 
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
-  const userId = wxContext.OPENIDs
+  const userId = wxContext.OPENID
 
   console.log('========== 云函数 combinePictures 被调用 ==========')
   console.log('收到事件:', JSON.stringify(event, null, 2))
