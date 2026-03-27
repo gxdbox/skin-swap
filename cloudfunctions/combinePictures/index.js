@@ -7,12 +7,12 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 
-// 图片配置 - 优化速度和大小
+// 图片配置 - 优化加载速度
 const IMAGE_CONFIG = {
   maxWidth: 1024, // 上传到 AI 的最大宽度
   maxHeight: 1024, // 上传到 AI 的最大高度
-  outputQuality: 80, // 输出图片质量 (%)
-  outputMaxWidth: 1280 // 输出图片最大宽度
+  outputQuality: 70, // 输出图片质量 (%)
+  outputMaxWidth: 640 // 输出图片最大宽度（适配手机屏幕）
 }
 
 exports.main = async (event, context) => {
@@ -259,35 +259,12 @@ async function compressAndUploadImage(imageUrl, taskId, userId) {
 
     console.log('上传到云存储成功，fileID:', uploadResult.fileID)
 
-    // 获取临时访问 URL（用于返回）
-    const tempUrlResult = await cloud.getTempFileURL({
-      fileList: [uploadResult.fileID]
-    })
-
-    if (tempUrlResult.fileList && tempUrlResult.fileList.length > 0) {
-      return tempUrlResult.fileList[0].tempFileURL
-    }
-
+    // 直接返回 fileID，小程序 image 组件支持 cloud:// 协议
     return uploadResult.fileID
 
   } catch (error) {
     console.error('压缩并上传图片失败:', error)
     // 如果压缩失败，返回原始 URL
     return imageUrl
-  }
-}
-
-    const result = await cloud.getTempFileURL({
-      fileList: [fileID]
-    })
-
-    if (result.fileList && result.fileList.length > 0) {
-      return result.fileList[0].tempFileURL
-    }
-
-    throw new Error('无法获取文件临时链接')
-  } catch (error) {
-    console.error('获取临时链接失败:', error)
-    throw new Error(`获取文件链接失败: ${error.message}`)
   }
 }
