@@ -147,6 +147,11 @@
   line-height: 1;
 }
 
+/* 合成效果预览区 */
+.result-section {
+  margin-bottom: 0;
+}
+
 /* 合成结果 */
 .result-container {
   position: relative;
@@ -154,6 +159,10 @@
   height: 200rpx;
   border-radius: 24rpx;
   overflow: hidden;
+}
+
+.result-container-small {
+  height: 100rpx;
 }
 
 .result-image {
@@ -191,6 +200,11 @@
   gap: 8rpx;
 }
 
+.empty-state-small {
+  height: 100rpx;
+  flex-direction: row;
+}
+
 .empty-icon {
   font-size: 48rpx;
 }
@@ -200,10 +214,18 @@
   color: #8B7355;
 }
 
-/* 操作按钮 */
-.action-area {
-  padding: 12rpx 0 0 0;
-  margin-top: auto;
+.empty-text-small {
+  font-size: 26rpx;
+  color: #8B7355;
+}
+
+/* 悬浮合成按钮 */
+.floating-action {
+  position: fixed;
+  bottom: 180rpx;
+  left: 32rpx;
+  right: 32rpx;
+  z-index: 99;
 }
 
 .btn-fuse {
@@ -217,6 +239,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 4rpx 16rpx rgba(196, 135, 90, 0.4);
 }
 
 .btn-fuse.disabled {
@@ -225,6 +248,11 @@
 
 .btn-fuse:active {
   opacity: 0.8;
+}
+
+/* 操作按钮（已废弃） */
+.action-area {
+  display: none;
 }
 
 /* AI 合成中 Loading 弹窗 */
