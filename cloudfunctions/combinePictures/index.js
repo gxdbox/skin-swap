@@ -259,7 +259,15 @@ async function compressAndUploadImage(imageUrl, taskId, userId) {
 
     console.log('上传到云存储成功，fileID:', uploadResult.fileID)
 
-    // 直接返回 fileID，小程序 image 组件支持 cloud:// 协议
+    // 获取临时访问 URL 用于快速加载
+    const tempUrlResult = await cloud.getTempFileURL({
+      fileList: [uploadResult.fileID]
+    })
+
+    if (tempUrlResult.fileList && tempUrlResult.fileList.length > 0) {
+      return tempUrlResult.fileList[0].tempFileURL
+    }
+
     return uploadResult.fileID
 
   } catch (error) {
