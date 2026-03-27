@@ -53,11 +53,11 @@
     </view>
 
     <!-- 合成效果区 -->
-    <view class="section">
-      <text class="section-title">合成效果</text>
+    <view class="section result-section">
+      <text class="section-title">合成效果预览</text>
 
       <!-- 合成结果 -->
-      <view wx:if="{{result}}" class="result-container" bindtap="onViewResult">
+      <view wx:if="{{result}}" class="result-container result-container-small" bindtap="onViewResult">
         <image class="result-image" src="{{result.image}}" mode="aspectFill" />
         <view class="result-overlay">
           <text class="result-hint">点击查看详情</text>
@@ -65,21 +65,63 @@
       </view>
 
       <!-- 空状态 -->
-      <view wx:else class="empty-state">
-        <text class="empty-icon">🎨</text>
-        <text class="empty-text">上传图片后开始合成</text>
+      <view wx:else class="empty-state empty-state-small">
+        <text class="empty-text-small">上传后点击底部按钮合成</text>
       </view>
     </view>
+  </view>
 
-    <!-- 操作按钮 -->
-    <view class="action-area">
-      <button
-        class="btn-fuse {{isProcessing ? 'disabled' : ''}}"
-        bindtap="onStartFuse"
-        disabled="{{isProcessing}}"
-      >
-        {{isProcessing ? '合成中...' : '开始合成'}}
-      </button>
+  <!-- 悬浮合成按钮 -->
+  <view class="floating-action">
+    <button
+      class="btn-fuse {{isProcessing ? 'disabled' : ''}}"
+      bindtap="onStartFuse"
+      disabled="{{isProcessing}}"
+    >
+      {{isProcessing ? '合成中...' : '开始合成'}}
+    </button>
+  </view>
+
+  <!-- AI 合成中 Loading 弹窗 -->
+  <view class="loading-overlay {{isProcessing ? 'show' : ''}}" wx:if="{{isProcessing}}">
+    <view class="loading-content">
+      <!-- 标题 -->
+      <view class="loading-title">
+        <text class="loading-icon">✨</text>
+        <text class="loading-title-text">AI 正在为您的沙发换肤</text>
+      </view>
+
+      <!-- 进度条 -->
+      <view class="progress-container">
+        <view class="progress-bar">
+          <view class="progress-fill" style="width: {{loadingProgress}}%"></view>
+        </view>
+        <text class="progress-text">{{loadingProgress}}%</text>
+      </view>
+
+      <!-- 预览图 -->
+      <view class="preview-section">
+        <view class="preview-item" wx:if="{{sofaImage}}">
+          <image class="preview-image" src="{{sofaImage}}" mode="aspectFill" />
+          <text class="preview-label">沙发原图</text>
+        </view>
+        <view class="preview-arrow" wx:if="{{sofaImage && customFabrics[0]}}">→</view>
+        <view class="preview-item" wx:if="{{customFabrics[0]}}">
+          <image class="preview-image" src="{{customFabrics[0].image}}" mode="aspectFill" />
+          <text class="preview-label">布料参考</text>
+        </view>
+      </view>
+
+      <!-- 时间估算 -->
+      <view class="time-estimate">
+        <text class="time-icon">⏱️</text>
+        <text class="time-text">{{estimatedTimeText}}</text>
+      </view>
+
+      <!-- 趣味提示 -->
+      <view class="loading-tip">
+        <text class="loading-tip-text">{{loadingTip}}</text>
+      </view>
     </view>
   </view>
 </view>

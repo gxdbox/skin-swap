@@ -7,16 +7,27 @@ Page({
     // 沙发图片
     sofaImage: '',
     sofaFileId: '',
-    // 布料列表（支持多张，最多5张）
+    // 布料列表（支持多张，最多 5 张）
     customFabrics: [],
     // 是否正在处理
     isProcessing: false,
-    // 当前任务ID
+    // 当前任务 ID
     currentTaskId: '',
     // 合成结果
     result: null,
     // 用户信息
-    userInfo: null
+    userInfo: null,
+    // Loading 相关
+    loadingProgress: 0,
+    loadingTipIndex: 0,
+    estimatedTimeText: '预计 20 秒',
+    loadingTips: [
+      '💡 AI 正在学习布料纹理和颜色...',
+      '🎨 正在分析沙发结构和光影...',
+      '✨ 正在融合布料到沙发模型...',
+      '🔍 正在优化细节和边缘...',
+      '🌟 即将完成，请稍候...'
+    ]
   },
 
   onLoad() {
@@ -47,8 +58,8 @@ Page({
 
       util.showLoading('上传中...');
 
-      // 压缩图片
-      const compressedPath = await util.compressImage(tempPath, 80);
+      // 压缩图片 - 限制尺寸和质量
+      const compressedPath = await compressImageForAI(tempPath);
 
       // 上传到云存储
       const cloudPath = util.generateCloudPath(app.globalData.openid || 'anonymous', 'sofa');
@@ -82,7 +93,7 @@ Page({
     
     // 检查是否已达到上限
     if (customFabrics.length >= 5) {
-      util.showToast('最多只能上传5张布料');
+      util.showToast('最多只能上传 5 张布料');
       return;
     }
 
@@ -92,8 +103,8 @@ Page({
 
       util.showLoading('上传中...');
 
-      // 压缩图片
-      const compressedPath = await util.compressImage(tempPath, 80);
+      // 压缩图片 - 限制尺寸和质量
+      const compressedPath = await compressImageForAI(tempPath);
 
       // 上传到云存储
       const cloudPath = util.generateCloudPath(app.globalData.openid || 'anonymous', 'fabric');
@@ -149,7 +160,9 @@ Page({
 
     try {
       this.setData({ isProcessing: true });
-      util.showLoading('正在合成...');
+
+      // 初始化 loading 状态
+      this.initLoadingState();
 
       // 使用第一张布料进行合成
       const firstFabric = customFabrics[0];
@@ -166,8 +179,6 @@ Page({
         }
       });
 
-      util.hideLoading();
-
       if (res.result.success) {
         const taskId = res.result.taskId;
         this.setData({ currentTaskId: taskId });
@@ -180,10 +191,86 @@ Page({
       }
     } catch (err) {
       this.setData({ isProcessing: false });
-      util.hideLoading();
       console.error('合成失败:', err);
       util.showError('合成失败，请重试');
     }
+  },
+
+  // 初始化 loading 状态
+  initLoadingState() {
+    this.setData({
+      loadingProgress: 0,
+      loadingTipIndex: 0,
+      estimatedTimeText: '预计 20 秒'
+    });
+
+    // 启动提示文案轮播
+    this.startTipRotation();
+
+    // 启动进度更新
+    this.startProgressUpdate();
+  },
+
+  // 启动提示文案轮播
+  startTipRotation() {
+    if (this.tipTimer) clearInterval(this.tipTimer);
+    
+    this.tipTimer = setInterval(() => {
+      const currentIndex = this.data.loadingTipIndex;
+      const nextIndex = (currentIndex + 1) % this.data.loadingTips.length;
+      this.setData({ loadingTipIndex: nextIndex });
+    }, 5000);
+  },
+
+  // 启动进度更新
+  startProgressUpdate() {
+    if (this.progressTimer) clearInterval(this.progressTimer);
+    
+    const pollCount = { value: 0 };
+    
+    this.progressTimer = setInterval(() => {
+      pollCount.value += 2; // 每 2 秒轮询一次
+      
+      // 计算进度（最多 60 次轮询 = 120 秒）
+      const progress = Math.min(95, Math.floor((pollCount.value / 60) * 100));
+      
+      // 计算剩余时间估算
+      const elapsed = pollCount.value * 2;
+      const remaining = Math.max(0, 20 - elapsed / 3); // 基于经验估算
+      
+      let estimatedTimeText = '';
+      if (remaining > 60) {
+        estimatedTimeText = `约 ${Math.ceil(remaining / 60)} 分钟`;
+      } else if (remaining > 10) {
+        estimatedTimeText = `预计 ${Math.ceil(remaining)} 秒`;
+      } else if (remaining > 0) {
+        estimatedTimeText = '即将完成';
+      } else {
+        estimatedTimeText = '正在完成最后处理...';
+      }
+
+      this.setData({
+        loadingProgress: progress,
+        estimatedTimeText: estimatedTimeText
+      });
+    }, 2000);
+  },
+
+  // 停止 loading 状态
+  stopLoadingState() {
+    if (this.tipTimer) clearInterval(this.tipTimer);
+    if (this.progressTimer) clearInterval(this.progressTimer);
+    
+    // 进度到 100%
+    this.setData({
+      loadingProgress: 100,
+      estimatedTimeText: '✨ 合成完成！'
+    });
+
+    // 延迟关闭
+    setTimeout(() => {
+      this.setData({ isProcessing: false });
+    }, 800);
   },
 
   // 轮询任务状态
@@ -201,17 +288,26 @@ Page({
         const { status, resultImageUrl, error } = res.result;
 
         if (status === 'completed') {
-          this.setData({
-            isProcessing: false,
-            result: {
-              image: resultImageUrl,
-              sofaImage: this.data.sofaImage,
-              fabricImage: this.data.customFabrics[0]?.image,
-              taskId
-            }
-          });
-          util.showSuccess('合成完成');
+          // 停止 loading 状态
+          this.stopLoadingState();
+
+          // 延迟显示结果
+          setTimeout(() => {
+            this.setData({
+              result: {
+                image: resultImageUrl,
+                sofaImage: this.data.sofaImage,
+                fabricImage: this.data.customFabrics[0]?.image,
+                taskId
+              }
+            });
+            util.showSuccess('合成完成');
+          }, 800);
         } else if (status === 'failed') {
+          // 停止 loading 状态
+          if (this.tipTimer) clearInterval(this.tipTimer);
+          if (this.progressTimer) clearInterval(this.progressTimer);
+          
           this.setData({ isProcessing: false });
           util.showError(error || '合成失败');
         } else {
@@ -219,10 +315,18 @@ Page({
           setTimeout(() => this.pollTaskStatus(taskId), 2000);
         }
       } else {
+        // 停止 loading 状态
+        if (this.tipTimer) clearInterval(this.tipTimer);
+        if (this.progressTimer) clearInterval(this.progressTimer);
+        
         this.setData({ isProcessing: false });
         util.showError('获取状态失败');
       }
     } catch (err) {
+      // 停止 loading 状态
+      if (this.tipTimer) clearInterval(this.tipTimer);
+      if (this.progressTimer) clearInterval(this.progressTimer);
+      
       this.setData({ isProcessing: false });
       console.error('轮询失败:', err);
       util.showError('网络错误');
@@ -270,8 +374,82 @@ Page({
   // 分享
   onShareAppMessage() {
     return {
-      title: '沙发换肤神器 - AI图片融合',
+      title: '沙发换肤神器 - AI 图片融合',
       path: '/pages/index/index'
     };
   }
 });
+
+// 压缩图片用于 AI 处理 - 限制尺寸和质量
+async function compressImageForAI(tempPath) {
+  return new Promise((resolve, reject) => {
+    // 先获取图片信息
+    wx.getImageInfo({
+      src: tempPath,
+      success: (infoRes) => {
+        const maxWidth = 1024;
+        const maxHeight = 1024;
+        let width = infoRes.width;
+        let height = infoRes.height;
+
+        // 计算压缩比例
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = Math.floor(width * ratio);
+          height = Math.floor(height * ratio);
+        }
+
+        // 使用 canvas 压缩
+        compressImageWithCanvas(tempPath, width, height, 80)
+          .then(resolve)
+          .catch(reject);
+      },
+      fail: (err) => {
+        // 如果获取信息失败，直接使用微信压缩
+        util.compressImage(tempPath, 80)
+          .then(resolve)
+          .catch(reject);
+      }
+    });
+  });
+}
+
+// 使用 canvas 压缩图片
+async function compressImageWithCanvas(srcPath, width, height, quality) {
+  return new Promise((resolve, reject) => {
+    wx.createSelectorQuery()
+      .select('#hiddenCanvas')
+      .fields({ node: true, size: true })
+      .exec((res) => {
+        if (!res[0] || !res[0].node) {
+          // 如果没有 canvas，使用普通压缩
+          util.compressImage(srcPath, quality)
+            .then(resolve)
+            .catch(reject);
+          return;
+        }
+
+        const canvas = res[0].node;
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const img = canvas.createImage();
+        img.src = srcPath;
+
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, width, height);
+          wx.canvasToTempFilePath({
+            canvas: canvas,
+            fileType: 'jpg',
+            quality: quality / 100,
+            success: (res) => resolve(res.tempFilePath),
+            fail: (err) => reject(err)
+          });
+        };
+
+        img.onerror = (err) => reject(err);
+      });
+  });
+}

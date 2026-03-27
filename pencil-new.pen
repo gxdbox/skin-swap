@@ -279,7 +279,7 @@
                       "id": "417V5",
                       "name": "emptyState",
                       "width": "fill_container",
-                      "height": 120,
+                      "height": 80,
                       "fill": "#F5EDE4",
                       "cornerRadius": 12,
                       "layout": "vertical",
@@ -288,23 +288,13 @@
                       "alignItems": "center",
                       "children": [
                         {
-                          "type": "icon_font",
-                          "id": "GZOLJ",
-                          "name": "emptyIcon",
-                          "width": 32,
-                          "height": 32,
-                          "iconFontName": "image",
-                          "iconFontFamily": "lucide",
-                          "fill": "#C9B8A8"
-                        },
-                        {
                           "type": "text",
                           "id": "yMUy7",
                           "name": "emptyText",
                           "fill": "#8B7355",
-                          "content": "上传图片后查看合成效果",
+                          "content": "上传后点击底部按钮合成",
                           "fontFamily": "Inter",
-                          "fontSize": 14,
+                          "fontSize": 13,
                           "fontWeight": "normal"
                         }
                       ]
@@ -318,9 +308,9 @@
         {
           "type": "frame",
           "id": "QptEI",
-          "name": "底部导航",
+          "name": "底部操作区",
           "width": "fill_container",
-          "height": 83,
+          "height": 100,
           "fill": "#FFFAF5",
           "layout": "vertical",
           "padding": [
@@ -329,8 +319,31 @@
             21,
             20
           ],
-          "justifyContent": "center",
           "children": [
+            {
+              "type": "frame",
+              "id": "synthBtn",
+              "name": "合成按钮",
+              "width": "fill_container",
+              "height": 50,
+              "fill": "#C4875A",
+              "cornerRadius": 25,
+              "layout": "vertical",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "synthText",
+                  "name": "synthText",
+                  "fill": "#FFFFFF",
+                  "content": "开始合成",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "600"
+                }
+              ]
+            },
             {
               "type": "frame",
               "id": "jm8P2",
@@ -341,6 +354,7 @@
               "cornerRadius": 25,
               "padding": 4,
               "justifyContent": "center",
+              "marginTop": 8,
               "children": [
                 {
                   "type": "frame",
@@ -902,9 +916,9 @@
         {
           "type": "frame",
           "id": "aDGX6",
-          "name": "底部导航",
+          "name": "底部操作区",
           "width": "fill_container",
-          "height": 83,
+          "height": 100,
           "fill": "#FFFAF5",
           "layout": "vertical",
           "padding": [
@@ -913,8 +927,31 @@
             21,
             20
           ],
-          "justifyContent": "center",
           "children": [
+            {
+              "type": "frame",
+              "id": "synthBtn2",
+              "name": "合成按钮",
+              "width": "fill_container",
+              "height": 50,
+              "fill": "#C4875A",
+              "cornerRadius": 25,
+              "layout": "vertical",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "synthText2",
+                  "name": "synthText2",
+                  "fill": "#FFFFFF",
+                  "content": "开始合成",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "600"
+                }
+              ]
+            },
             {
               "type": "frame",
               "id": "wSW1T",
@@ -925,6 +962,7 @@
               "cornerRadius": 25,
               "padding": 4,
               "justifyContent": "center",
+              "marginTop": 8,
               "children": [
                 {
                   "type": "frame",
@@ -1132,12 +1170,12 @@
           "height": "fill_container",
           "layout": "vertical",
           "gap": 20,
-          "padding": [
-            0,
-            20,
-            24,
-            20
-          ],
+              "padding": [
+                16,
+                20,
+                20,
+                20
+              ],
           "children": [
             {
               "type": "frame",

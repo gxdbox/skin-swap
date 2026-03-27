@@ -147,6 +147,11 @@
   line-height: 1;
 }
 
+/* 合成效果预览区 */
+.result-section {
+  margin-bottom: 0;
+}
+
 /* 合成结果 */
 .result-container {
   position: relative;
@@ -154,6 +159,10 @@
   height: 200rpx;
   border-radius: 24rpx;
   overflow: hidden;
+}
+
+.result-container-small {
+  height: 100rpx;
 }
 
 .result-image {
@@ -191,6 +200,11 @@
   gap: 8rpx;
 }
 
+.empty-state-small {
+  height: 100rpx;
+  flex-direction: row;
+}
+
 .empty-icon {
   font-size: 48rpx;
 }
@@ -200,10 +214,18 @@
   color: #8B7355;
 }
 
-/* 操作按钮 */
-.action-area {
-  padding: 12rpx 0 0 0;
-  margin-top: auto;
+.empty-text-small {
+  font-size: 26rpx;
+  color: #8B7355;
+}
+
+/* 悬浮合成按钮 */
+.floating-action {
+  position: fixed;
+  bottom: 180rpx;
+  left: 32rpx;
+  right: 32rpx;
+  z-index: 99;
 }
 
 .btn-fuse {
@@ -217,6 +239,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 4rpx 16rpx rgba(196, 135, 90, 0.4);
 }
 
 .btn-fuse.disabled {
@@ -225,4 +248,179 @@
 
 .btn-fuse:active {
   opacity: 0.8;
+}
+
+/* 操作按钮（已废弃） */
+.action-area {
+  display: none;
+}
+
+/* AI 合成中 Loading 弹窗 */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.loading-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.loading-content {
+  width: 600rpx;
+  background: #FFFFFF;
+  border-radius: 32rpx;
+  padding: 48rpx 40rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.2);
+}
+
+.loading-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.loading-icon {
+  font-size: 64rpx;
+  animation: sparkle 1.5s ease infinite;
+}
+
+@keyframes sparkle {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+}
+
+.loading-title-text {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #5C4033;
+  text-align: center;
+}
+
+/* 进度条 */
+.progress-container {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 12rpx;
+  background: #F5EDE4;
+  border-radius: 6rpx;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #C4875A, #D49A6A);
+  border-radius: 6rpx;
+  transition: width 0.5s ease;
+}
+
+.progress-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #C4875A;
+  min-width: 80rpx;
+  text-align: right;
+}
+
+/* 预览图 */
+.preview-section {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24rpx;
+}
+
+.preview-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.preview-image {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 20rpx;
+  border: 3rpx solid #F5EDE4;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+
+.preview-label {
+  font-size: 22rpx;
+  color: #8B7355;
+  text-align: center;
+}
+
+.preview-arrow {
+  font-size: 40rpx;
+  color: #C4875A;
+  margin-top: 40rpx;
+  animation: pulse 1s ease infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.1); }
+}
+
+/* 时间估算 */
+.time-estimate {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  background: #FFFAF5;
+  padding: 16rpx 32rpx;
+  border-radius: 24rpx;
+  border: 2rpx solid #F5EDE4;
+}
+
+.time-icon {
+  font-size: 32rpx;
+}
+
+.time-text {
+  font-size: 26rpx;
+  color: #5C4033;
+  font-weight: 500;
+}
+
+/* 趣味提示 */
+.loading-tip {
+  width: 100%;
+  background: linear-gradient(135deg, #FFF8F0, #FFF0E0);
+  padding: 24rpx;
+  border-radius: 20rpx;
+  border: 2rpx solid #F5EDE4;
+}
+
+.loading-tip-text {
+  font-size: 26rpx;
+  color: #8B7355;
+  line-height: 1.6;
+  text-align: center;
+  display: block;
 }
