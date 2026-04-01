@@ -11,7 +11,7 @@ const db = cloud.database()
 const IMAGE_CONFIG = {
   maxWidth: 1024, // 上传到 AI 的最大宽度
   maxHeight: 1024, // 上传到 AI 的最大高度
-  outputQuality: 70, // 输出图片质量 (%)
+  outputQuality: 65, // 输出图片质量 (%) - 降低 5% 提升速度
   outputMaxWidth: 640 // 输出图片最大宽度（适配手机屏幕）
 }
 
@@ -134,30 +134,39 @@ async function processImageCombine(taskId, sofaImageUrl, fabricImageUrl, userId)
 
     console.log('压缩后的图片 URL:', compressedResultUrl)
 
-    // 更新任务状态为完成
-    await db.collection('ai_tasks').doc(taskId).update({
-      data: {
-        status: 'completed',
-        resultImageUrl: compressedResultUrl,
-        updatedAt: db.serverDate(),
-        completedAt: db.serverDate()
-      }
-    })
-
-    // 保存到历史记录
-    await db.collection('fusion_history').add({
-      data: {
-        userId,
-        sofaImage: sofaImageUrl,
-        fabricImage: fabricImageUrl,
-        resultImage: compressedResultUrl,
-        taskId,
-        createdAt: db.serverDate()
-      }
-    })
-
-    // 更新用户合成次数
-    await updateUserFusionCount(userId)
+    // 并行更新任务状态、保存历史记录和更新用户统计
+    console.log('步骤 3: 并行更新数据库记录...')
+    const parallelStartTime = Date.now()
+    
+    await Promise.all([
+      // 1. 更新任务状态为完成
+      db.collection('ai_tasks').doc(taskId).update({
+        data: {
+          status: 'completed',
+          resultImageUrl: compressedResultUrl,
+          updatedAt: db.serverDate(),
+          completedAt: db.serverDate()
+        }
+      }),
+      
+      // 2. 保存到历史记录
+      db.collection('fusion_history').add({
+        data: {
+          userId,
+          sofaImage: sofaImageUrl,
+          fabricImage: fabricImageUrl,
+          resultImage: compressedResultUrl,
+          taskId,
+          createdAt: db.serverDate()
+        }
+      }),
+      
+      // 3. 更新用户合成次数
+      updateUserFusionCount(userId)
+    ])
+    
+    const parallelTime = Date.now() - parallelStartTime
+    console.log(`数据库并行更新完成，耗时：${parallelTime}ms`)
 
     console.log(`任务 ${taskId} 完成，图片已压缩存储`)
 
@@ -223,16 +232,21 @@ async function compressAndUploadImage(imageUrl, taskId, userId) {
   try {
     console.log('下载 AI 生成的图片...')
     
-    // 下载图片
+    const downloadStartTime = Date.now()
+    
+    // 下载图片 - 优化超时时间
     const response = await axios.get(imageUrl, {
       responseType: 'arraybuffer',
-      timeout: 30000
+      timeout: 60000 // 延长超时到 60 秒
     })
 
     const imageBuffer = Buffer.from(response.data)
+    const downloadTime = Date.now() - downloadStartTime
     
-    console.log('图片下载完成，原始大小:', (imageBuffer.length / 1024 / 1024).toFixed(2), 'MB')
+    console.log('图片下载完成，耗时:', downloadTime + 'ms', '原始大小:', (imageBuffer.length / 1024 / 1024).toFixed(2), 'MB')
 
+    const compressStartTime = Date.now()
+    
     // 使用 Jimp 压缩图片
     const image = await jimp.read(imageBuffer)
     
@@ -243,31 +257,28 @@ async function compressAndUploadImage(imageUrl, taskId, userId) {
     
     console.log('调整后尺寸:', image.getWidth(), 'x', image.getHeight())
 
-    // 压缩并转换为 buffer
+    // 压缩并转换为 buffer - 降低质量提升速度
     const compressedBuffer = await image.quality(IMAGE_CONFIG.outputQuality).getBufferAsync(jimp.MIME_JPEG)
     
-    console.log('压缩后大小:', (compressedBuffer.length / 1024 / 1024).toFixed(2), 'MB')
+    const compressTime = Date.now() - compressStartTime
+    console.log('压缩完成，耗时:', compressTime + 'ms', '压缩后大小:', (compressedBuffer.length / 1024 / 1024).toFixed(2), 'MB')
 
     // 生成云存储路径
     const cloudPath = `results/${userId}/${taskId}.jpg`
 
+    const uploadStartTime = Date.now()
+    
     // 上传到云存储
     const uploadResult = await cloud.uploadFile({
       cloudPath: cloudPath,
       fileContent: compressedBuffer
     })
 
-    console.log('上传到云存储成功，fileID:', uploadResult.fileID)
+    const uploadTime = Date.now() - uploadStartTime
+    console.log('上传到云存储成功，耗时:', uploadTime + 'ms', 'fileID:', uploadResult.fileID)
 
-    // 获取临时访问 URL 用于快速加载
-    const tempUrlResult = await cloud.getTempFileURL({
-      fileList: [uploadResult.fileID]
-    })
-
-    if (tempUrlResult.fileList && tempUrlResult.fileList.length > 0) {
-      return tempUrlResult.fileList[0].tempFileURL
-    }
-
+    // 直接返回 fileID，小程序端可以按需获取临时 URL
+    // 避免在这里阻塞等待 getTempFileURL
     return uploadResult.fileID
 
   } catch (error) {
