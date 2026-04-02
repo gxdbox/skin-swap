@@ -102,44 +102,35 @@ exports.main = async (event, context) => {
 
 // 异步处理图像合成任务
 async function processImageCombine(taskId, sofaImageUrl, fabricImageUrl, userId) {
+  const totalStartTime = Date.now()
+  const timingStats = {}
+  
   console.log('========== 开始异步处理任务 ==========')
-  console.log('任务ID:', taskId)
-  console.log('沙发图片:', sofaImageUrl)
-  console.log('布料图片:', fabricImageUrl)
+  console.log('任务 ID:', taskId)
 
   try {
-    console.log('步骤1: 获取云存储文件临时下载链接...')
-
-    // 获取云存储文件的临时下载链接
+    // 步骤 1: 获取临时下载链接
+    const step1Start = Date.now()
     const [sofaTempUrl, fabricTempUrl] = await Promise.all([
       getFileDownloadUrl(sofaImageUrl),
       getFileDownloadUrl(fabricImageUrl)
     ])
+    timingStats.getTempUrl = Date.now() - step1Start
 
-    console.log('已获取临时URL')
-    console.log('沙发临时URL:', sofaTempUrl)
-    console.log('布料临时URL:', fabricTempUrl)
-
-    // 使用 AI 适配器进行图像合成
+    // 步骤 2: AI 图像合成
     const aiAdapter = AIAdapterFactory.createAdapter()
-    console.log('使用 AI 厂商:', aiAdapter.getName())
-    
+    const step2Start = Date.now()
     const result = await aiAdapter.combineImages(sofaTempUrl, fabricTempUrl)
+    timingStats.aiProcessing = Date.now() - step2Start
 
-    console.log('AI 服务返回结果:', result)
-
-    // 压缩并上传结果图片到云存储
-    console.log('步骤 2: 压缩并上传结果图片...')
+    // 步骤 3: 压缩并上传
+    const step3Start = Date.now()
     const compressedResultUrl = await compressAndUploadImage(result.imageUrl, taskId, userId)
+    timingStats.compressUpload = Date.now() - step3Start
 
-    console.log('压缩后的图片 URL:', compressedResultUrl)
-
-    // 并行更新任务状态、保存历史记录和更新用户统计
-    console.log('步骤 3: 并行更新数据库记录...')
-    const parallelStartTime = Date.now()
-    
+    // 步骤 4: 并行更新数据库
+    const step4Start = Date.now()
     await Promise.all([
-      // 1. 更新任务状态为完成
       db.collection('ai_tasks').doc(taskId).update({
         data: {
           status: 'completed',
@@ -147,6 +138,58 @@ async function processImageCombine(taskId, sofaImageUrl, fabricImageUrl, userId)
           updatedAt: db.serverDate(),
           completedAt: db.serverDate()
         }
+      }),
+      db.collection('fusion_history').add({
+        data: {
+          userId,
+          sofaImage: sofaImageUrl,
+          fabricImage: fabricImageUrl,
+          resultImage: compressedResultUrl,
+          taskId,
+          createdAt: db.serverDate()
+        }
+      }),
+      updateUserFusionCount(userId)
+    ])
+    timingStats.dbUpdate = Date.now() - step4Start
+
+    // 计算总耗时
+    const totalTime = Date.now() - totalStartTime
+    
+    // 输出汇总的性能报告（一条日志）
+    const report = {
+      taskId,
+      totalTime: `${totalTime}ms (${(totalTime/1000).toFixed(2)}秒)`,
+      breakdown: {
+        getTempUrl: `${timingStats.getTempUrl}ms (${((timingStats.getTempUrl/totalTime)*100).toFixed(1)}%)`,
+        aiProcessing: `${timingStats.aiProcessing}ms (${((timingStats.aiProcessing/totalTime)*100).toFixed(1)}%)`,
+        compressUpload: `${timingStats.compressUpload}ms (${((timingStats.compressUpload/totalTime)*100).toFixed(1)}%)`,
+        dbUpdate: `${timingStats.dbUpdate}ms (${((timingStats.dbUpdate/totalTime)*100).toFixed(1)}%)`
+      },
+      bottleneck: Object.entries({
+        getTempUrl: timingStats.getTempUrl,
+        aiProcessing: timingStats.aiProcessing,
+        compressUpload: timingStats.compressUpload,
+        dbUpdate: timingStats.dbUpdate
+      }).sort((a, b) => b[1] - a[1])[0][0]
+    }
+    
+    console.log('========== 性能报告 ==========')
+    console.log(JSON.stringify(report, null, 2))
+    console.log(`🐌 最慢环节：${report.bottleneck}`)
+    console.log('==============================')
+
+  } catch (error) {
+    console.error(`任务 ${taskId} 失败:`, error)
+    await db.collection('ai_tasks').doc(taskId).update({
+      data: {
+        status: 'failed',
+        error: error.message,
+        updatedAt: db.serverDate()
+      }
+    })
+  }
+}
       }),
       
       // 2. 保存到历史记录
