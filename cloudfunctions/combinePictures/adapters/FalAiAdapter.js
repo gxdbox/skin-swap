@@ -11,8 +11,8 @@ class FalAiAdapter extends BaseAIAdapter {
     this.apiKey = config.apiKey
     this.baseUrl = 'https://queue.fal.run'
     this.endpoint = config.endpoint || 'fal-ai/flux-2/edit'
-    this.maxPollAttempts = 120
-    this.pollInterval = 2000
+    this.maxPollAttempts = 60  // 优化：从 120 减少到 60
+    this.pollInterval = 1500   // 优化：从 2000ms 减少到 1500ms
   }
 
   getName() {

@@ -7,6 +7,7 @@ Page({
     // 沙发图片
     sofaImage: '',
     sofaFileId: '',
+    sofaImageUrl: '',  // 保存临时 URL（异步获取）
     // 布料列表（支持多张，最多 5 张）
     customFabrics: [],
     // 是否正在处理
@@ -58,17 +59,21 @@ Page({
 
       util.showLoading('上传中...');
 
-      // 压缩图片 - 限制尺寸和质量
+      // 压缩图片 - 优化尺寸和质量
       const compressedPath = await compressImageForAI(tempPath);
 
       // 上传到云存储
       const cloudPath = util.generateCloudPath(app.globalData.openid || 'anonymous', 'sofa');
-      const fileId = await util.uploadFile(compressedPath, cloudPath);
+      const { fileID } = await util.uploadFile(compressedPath, cloudPath);
 
       this.setData({
         sofaImage: compressedPath,
-        sofaFileId: fileId
+        sofaFileId: fileID,
+        sofaImageUrl: fileID  // 先保存 fileID，稍后异步获取 URL
       });
+
+      // 异步获取临时 URL（不阻塞上传）
+      this.getTempUrlForSofa(fileID);
 
       util.hideLoading();
       util.showSuccess('上传成功');
@@ -76,6 +81,17 @@ Page({
       util.hideLoading();
       console.error('上传失败:', err);
       util.showError('上传失败');
+    }
+  },
+
+  // 异步获取沙发图片的临时 URL
+  async getTempUrlForSofa(fileID) {
+    try {
+      const url = await util.getTempFileURL(fileID);
+      this.setData({ sofaImageUrl: url });
+    } catch (err) {
+      console.error('获取沙发临时 URL 失败:', err);
+      // 失败也无所谓，云函数可以用 fileID
     }
   },
 
@@ -103,23 +119,27 @@ Page({
 
       util.showLoading('上传中...');
 
-      // 压缩图片 - 限制尺寸和质量
+      // 压缩图片 - 优化尺寸和质量
       const compressedPath = await compressImageForAI(tempPath);
 
       // 上传到云存储
       const cloudPath = util.generateCloudPath(app.globalData.openid || 'anonymous', 'fabric');
-      const fileId = await util.uploadFile(compressedPath, cloudPath);
+      const { fileID } = await util.uploadFile(compressedPath, cloudPath);
 
       // 添加到布料列表
       const newFabric = {
         id: Date.now(),
         image: compressedPath,
-        fileId: fileId
+        fileId: fileID,
+        url: fileID  // 先保存 fileID，稍后异步获取 URL
       };
 
       this.setData({
         customFabrics: [...customFabrics, newFabric]
       });
+
+      // 异步获取临时 URL（不阻塞上传）
+      this.getTempUrlForFabric(newFabric.id, fileID);
 
       util.hideLoading();
       util.showSuccess('上传成功');
@@ -127,6 +147,20 @@ Page({
       util.hideLoading();
       console.error('上传失败:', err);
       util.showError('上传失败');
+    }
+  },
+
+  // 异步获取布料图片的临时 URL
+  async getTempUrlForFabric(fabricId, fileID) {
+    try {
+      const url = await util.getTempFileURL(fileID);
+      // 更新布料的 URL
+      const customFabrics = this.data.customFabrics.map(f => 
+        f.id === fabricId ? { ...f, url } : f
+      );
+      this.setData({ customFabrics });
+    } catch (err) {
+      console.error('获取布料临时 URL 失败:', err);
     }
   },
 
@@ -139,7 +173,7 @@ Page({
 
   // 开始合成
   async onStartFuse() {
-    const { sofaImage, sofaFileId, customFabrics } = this.data;
+    const { sofaImage, sofaFileId, sofaImageUrl, customFabrics } = this.data;
 
     // 验证
     if (!sofaImage) {
@@ -166,16 +200,18 @@ Page({
 
       // 使用第一张布料进行合成
       const firstFabric = customFabrics[0];
-      const fabricUrl = firstFabric.image;
-      const fabricFileId = firstFabric.fileId;
+      
+      // 智能判断：如果有临时 URL 则使用 URL，否则使用 fileID
+      const sofaUrl = sofaImageUrl.startsWith('http') ? sofaImageUrl : sofaFileId;
+      const fabricUrl = firstFabric.url.startsWith('http') ? firstFabric.url : firstFabric.fileId;
 
-      // 调用云函数
+      // 调用云函数（同步等待结果，用户可以看到 AI 合成的图片）
       const res = await wx.cloud.callFunction({
         name: 'combinePictures',
         data: {
           action: 'create',
-          sofaImageUrl: sofaFileId || sofaImage,
-          fabricImageUrl: fabricFileId || fabricUrl
+          sofaImageUrl: sofaUrl,
+          fabricImageUrl: fabricUrl
         }
       });
 
@@ -183,8 +219,8 @@ Page({
         const taskId = res.result.taskId;
         this.setData({ currentTaskId: taskId });
 
-        // 开始轮询任务状态
-        this.pollTaskStatus(taskId);
+        // 立即显示结果（使用 AI 返回的原始图片 URL）
+        this.showResult(res.result.resultImageUrl, taskId);
       } else {
         this.setData({ isProcessing: false });
         util.showError(res.result.message || '合成失败');
@@ -194,6 +230,25 @@ Page({
       console.error('合成失败:', err);
       util.showError('合成失败，请重试');
     }
+  },
+
+  // 显示结果
+  showResult(resultImageUrl, taskId) {
+    // 停止 loading 状态
+    this.stopLoadingState();
+
+    // 延迟显示结果
+    setTimeout(() => {
+      this.setData({
+        result: {
+          image: resultImageUrl,
+          sofaImage: this.data.sofaImage,
+          fabricImage: this.data.customFabrics[0]?.image,
+          taskId
+        }
+      });
+      util.showSuccess('合成完成');
+    }, 500);
   },
 
   // 初始化 loading 状态
@@ -231,12 +286,12 @@ Page({
     this.progressTimer = setInterval(() => {
       pollCount.value += 2; // 每 2 秒轮询一次
       
-      // 计算进度（最多 60 次轮询 = 120 秒）
-      const progress = Math.min(95, Math.floor((pollCount.value / 60) * 100));
+      // 计算进度（最多 30 次轮询 = 60 秒，基于 FAL.ai 优化后的轮询间隔）
+      const progress = Math.min(95, Math.floor((pollCount.value / 30) * 100));
       
-      // 计算剩余时间估算
+      // 计算剩余时间估算（基于优化后的 20 秒预估）
       const elapsed = pollCount.value * 2;
-      const remaining = Math.max(0, 20 - elapsed / 3); // 基于经验估算
+      const remaining = Math.max(0, 20 - elapsed / 2); // 基于经验估算
       
       let estimatedTimeText = '';
       if (remaining > 60) {
@@ -273,7 +328,7 @@ Page({
     }, 800);
   },
 
-  // 轮询任务状态
+  // 轮询任务状态（仅用于检查任务是否失败，不用于获取结果）
   async pollTaskStatus(taskId) {
     try {
       const res = await wx.cloud.callFunction({
@@ -285,34 +340,24 @@ Page({
       });
 
       if (res.result.success) {
-        const { status, resultImageUrl, error } = res.result;
+        const { status, error } = res.result;
 
-        if (status === 'completed') {
-          // 停止 loading 状态
-          this.stopLoadingState();
-
-          // 延迟显示结果
-          setTimeout(() => {
-            this.setData({
-              result: {
-                image: resultImageUrl,
-                sofaImage: this.data.sofaImage,
-                fabricImage: this.data.customFabrics[0]?.image,
-                taskId
-              }
-            });
-            util.showSuccess('合成完成');
-          }, 800);
-        } else if (status === 'failed') {
+        // 如果任务失败，提示用户
+        if (status === 'failed') {
           // 停止 loading 状态
           if (this.tipTimer) clearInterval(this.tipTimer);
           if (this.progressTimer) clearInterval(this.progressTimer);
           
           this.setData({ isProcessing: false });
           util.showError(error || '合成失败');
-        } else {
-          // 继续轮询
-          setTimeout(() => this.pollTaskStatus(taskId), 2000);
+        }
+        // 如果已完成，不需要再处理（用户已经看到结果了）
+        else if (status === 'completed') {
+          // 什么都不做，用户已经看到结果了
+        }
+        // 继续轮询
+        else {
+          setTimeout(() => this.pollTaskStatus(taskId), 1500);
         }
       } else {
         // 停止 loading 状态
@@ -380,15 +425,16 @@ Page({
   }
 });
 
-// 压缩图片用于 AI 处理 - 限制尺寸和质量
+// 压缩图片用于 AI 处理 - 优化尺寸和质量以加快上传速度
 async function compressImageForAI(tempPath) {
   return new Promise((resolve, reject) => {
     // 先获取图片信息
     wx.getImageInfo({
       src: tempPath,
       success: (infoRes) => {
-        const maxWidth = 1024;
-        const maxHeight = 1024;
+        // 优化：降低尺寸和质量，加快上传速度
+        const maxWidth = 640;  // 从 1024 改为 640
+        const maxHeight = 640; // 从 1024 改为 640
         let width = infoRes.width;
         let height = infoRes.height;
 
@@ -400,13 +446,13 @@ async function compressImageForAI(tempPath) {
         }
 
         // 使用 canvas 压缩
-        compressImageWithCanvas(tempPath, width, height, 80)
+        compressImageWithCanvas(tempPath, width, height, 70) // 从 80 改为 70
           .then(resolve)
           .catch(reject);
       },
       fail: (err) => {
         // 如果获取信息失败，直接使用微信压缩
-        util.compressImage(tempPath, 80)
+        util.compressImage(tempPath, 70) // 从 80 改为 70
           .then(resolve)
           .catch(reject);
       }

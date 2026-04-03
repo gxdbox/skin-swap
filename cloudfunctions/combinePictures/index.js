@@ -60,15 +60,16 @@ exports.main = async (event, context) => {
     // 同步执行 AI 合成（用户等待这部分）
     const result = await processAICombine(taskId, sofaImageUrl, fabricImageUrl, userId)
 
-    // 异步处理后续：压缩、上传、数据库更新（不阻塞用户）
+    // 异步处理后续：压缩、上传、数据库更新（不阻塞用户，用户已看到结果）
     processPostAI(taskId, result.imageUrl, sofaImageUrl, fabricImageUrl, userId)
       .catch(err => console.error('异步后处理失败:', err))
 
+    // 立即返回 AI 合成的结果（用户可以直接看到图片）
     return {
       success: true,
       taskId: taskId,
       status: 'completed',
-      resultImageUrl: result.imageUrl,
+      resultImageUrl: result.imageUrl,  // 直接返回 AI 生成的 URL
       message: '合成完成'
     }
 
@@ -81,15 +82,17 @@ exports.main = async (event, context) => {
   }
 }
 
-// 同步执行 AI 合成（用户等待这部分，约 17 秒）
+// 同步执行 AI 合成（用户等待这部分，优化后约 10-12 秒）
 async function processAICombine(taskId, sofaImageUrl, fabricImageUrl, userId) {
   console.log(`任务 ${taskId}: 开始 AI 合成`)
 
-  // 获取临时下载链接
-  const [sofaTempUrl, fabricTempUrl] = await Promise.all([
-    getFileDownloadUrl(sofaImageUrl),
-    getFileDownloadUrl(fabricImageUrl)
-  ])
+  // 优化：前端已传入临时 URL，直接使用，跳过获取临时链接步骤
+  // 检查是否是 http 开头的 URL，如果是则直接使用
+  const sofaTempUrl = sofaImageUrl.startsWith('http') ? sofaImageUrl : await getFileDownloadUrl(sofaImageUrl)
+  const fabricTempUrl = fabricImageUrl.startsWith('http') ? fabricImageUrl : await getFileDownloadUrl(fabricImageUrl)
+
+  console.log(`任务 ${taskId}: 沙发图片 URL 类型：${sofaImageUrl.startsWith('http') ? '临时 URL' : 'fileID'}`)
+  console.log(`任务 ${taskId}: 布料图片 URL 类型：${fabricImageUrl.startsWith('http') ? '临时 URL' : 'fileID'}`)
 
   // 调用 AI 合成
   const aiAdapter = AIAdapterFactory.createAdapter()

@@ -101,7 +101,7 @@ function chooseImage(count = 1) {
  * 上传文件到云存储
  * @param {string} filePath 本地文件路径
  * @param {string} cloudPath 云存储路径
- * @returns {Promise<string>} 云存储文件ID
+ * @returns {Promise<Object>} 云存储文件 ID
  */
 function uploadFile(filePath, cloudPath) {
   return new Promise((resolve, reject) => {
@@ -109,7 +109,10 @@ function uploadFile(filePath, cloudPath) {
       cloudPath: cloudPath,
       filePath: filePath,
       success: (res) => {
-        resolve(res.fileID);
+        // 立即返回 fileID，不等待获取临时 URL
+        resolve({
+          fileID: res.fileID
+        });
       },
       fail: (err) => {
         reject(err);
